@@ -24,30 +24,8 @@
             max-width: 100%;
             height: auto;
         }
-        .controls {
-            margin-top: 15px;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        button, label.file-btn {
-            background: #ff5722;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            font-size: 16px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        button:hover, label.file-btn:hover {
-            background: #e64a19;
-        }
-        input[type="file"] {
-            display: none;
-        }
         .instructions {
-            margin-top: 10px;
+            margin-top: 15px;
             font-size: 14px;
             color: #aaa;
             text-align: center;
@@ -57,32 +35,20 @@
 <body>
 
     <canvas id="gameCanvas" width="800" height="400"></canvas>
-
-    <div class="controls">
-        <button id="jumpBtn">ジャンプ (Space / タップ)</button>
-        <label class="file-btn">
-            📁 主人公画像を選択
-            <input type="file" id="imageLoader" accept="image/*">
-        </label>
-    </div>
     <div class="instructions">
-        ※PCは [Space] キーまたはクリック、スマホは画面タップでジャンプします。
+        [Space] キーまたは画面クリックでジャンプします
     </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
-        // 音声用のコンテキスト（Web Audio API）
+        // 音声（Web Audio API）
         let audioCtx = null;
-        function initAudio() {
+        function playJumpSound() {
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
-        }
-
-        function playJumpSound() {
-            if (!audioCtx) return;
             try {
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
@@ -97,12 +63,10 @@
                 gain.connect(audioCtx.destination);
                 osc.start();
                 osc.stop(audioCtx.currentTime + 0.15);
-            } catch (e) {
-                console.log(e);
-            }
+            } catch (e) {}
         }
 
-        // プレイヤー設定
+        // プレイヤー
         const player = {
             x: 100,
             y: 250,
@@ -114,55 +78,32 @@
             isGrounded: false
         };
 
-        // 障害物設定
         let obstacles = [];
         let gameSpeed = 5;
         let score = 0;
         let isGameOver = false;
         let frameCount = 0;
 
-        // キャラクター画像
-        let charImage = new Image();
+        // キャラクター画像読み込み
+        const charImage = new Image();
         let imageLoaded = false;
 
-        // 画像読み込み設定（TTK_2.PNG を優先し、失敗時は小文字やJPGをフォールバック）
-        function loadCharacterImage(src) {
-            charImage.onload = function() {
-                imageLoaded = true;
-                console.log("画像読み込み成功:", src);
-            };
-            charImage.onerror = function() {
-                console.log("画像読み込み失敗:", src);
-                if (src === 'TTK_2.PNG') {
-                    loadCharacterImage('TTK_2.png'); // 小文字を試す
-                } else if (src === 'TTK_2.png') {
-                    loadCharacterImage('TTK_2.jpg'); // jpgを試す
-                } else {
-                    imageLoaded = false;
-                }
-            };
-            charImage.src = src;
-        }
-
-        // 初期読み込み試行
-        loadCharacterImage('TTK_2.PNG');
-
-        // ファイルピッカーで画像が選択された時
-        document.getElementById('imageLoader').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    charImage.src = event.target.result;
-                    imageLoaded = true;
-                };
-                reader.readAsDataURL(file);
+        charImage.onload = () => {
+            imageLoaded = true;
+        };
+        charImage.onerror = () => {
+            // TTK_2.PNGで見つからない場合、小文字やjpgも試す
+            if (charImage.src.endsWith('TTK_2.PNG')) {
+                charImage.src = 'TTK_2.png';
+            } else if (charImage.src.endsWith('TTK_2.png')) {
+                charImage.src = 'TTK_2.jpg';
             }
-        });
+        };
+        // 初期読み込み指定
+        charImage.src = 'TTK_2.PNG';
 
-        // 入力処理
+        // 操作
         function jump() {
-            initAudio();
             if (isGameOver) {
                 resetGame();
                 return;
@@ -185,11 +126,6 @@
             jump();
         });
 
-        document.getElementById('jumpBtn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            jump();
-        });
-
         function resetGame() {
             obstacles = [];
             score = 0;
@@ -199,17 +135,14 @@
             player.vy = 0;
         }
 
-        // ゲームループ
         function update() {
             if (!isGameOver) {
                 frameCount++;
                 score++;
 
-                // 物理演算
                 player.vy += player.gravity;
                 player.y += player.vy;
 
-                // 地面判定
                 const groundLevel = 300;
                 if (player.y >= groundLevel) {
                     player.y = groundLevel;
@@ -217,7 +150,6 @@
                     player.isGrounded = true;
                 }
 
-                // 障害物の生成
                 if (frameCount % 100 === 0) {
                     obstacles.push({
                         x: canvas.width,
@@ -227,11 +159,9 @@
                     });
                 }
 
-                // 障害物の移動と判定
                 for (let i = obstacles.length - 1; i >= 0; i--) {
                     obstacles[i].x -= gameSpeed;
 
-                    // 衝突判定（当たり判定）
                     if (
                         player.x < obstacles[i].x + obstacles[i].width &&
                         player.x + player.width > obstacles[i].x &&
@@ -241,5 +171,63 @@
                         isGameOver = true;
                     }
 
-                    // 画面外に出たら削除
                     if (obstacles[i].x + obstacles[i].width < 0) {
+                        obstacles.splice(i, 1);
+                    }
+                }
+
+                gameSpeed = 5 + Math.floor(score / 500);
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 地面
+            ctx.fillStyle = '#555';
+            ctx.fillRect(0, 330, canvas.width, 70);
+
+            // プレイヤー描画（画像があれば画像、なければ四角形）
+            if (imageLoaded) {
+                ctx.drawImage(charImage, player.x, player.y, player.width, player.height);
+            } else {
+                ctx.fillStyle = '#ff80bf';
+                ctx.fillRect(player.x, player.y, player.width, player.height);
+            }
+
+            // 障害物
+            ctx.fillStyle = '#ff3333';
+            for (let obs of obstacles) {
+                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+            }
+
+            // スコア
+            ctx.fillStyle = '#fff';
+            ctx.font = '20px sans-serif';
+            ctx.fillText(`SCORE: ${score}`, 20, 30);
+
+            // ゲームオーバー
+            if (isGameOver) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = '30px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 15);
+                ctx.font = '16px sans-serif';
+                ctx.fillText('クリック または スペースキーでリトライ', canvas.width / 2, canvas.height / 2 + 25);
+                ctx.textAlign = 'left';
+            }
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        loop();
+    </script>
+</body>
+</html>
