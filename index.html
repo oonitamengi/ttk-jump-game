@@ -21,8 +21,7 @@
         canvas {
             background: #333;
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            max-width: 100%;
-            height: auto;
+            cursor: pointer;
         }
         .instructions {
             margin-top: 15px;
@@ -36,35 +35,12 @@
 
     <canvas id="gameCanvas" width="800" height="400"></canvas>
     <div class="instructions">
-        [Space] キーまたは画面クリックでジャンプします
+        [Space] キーまたは画面クリックでジャンプ / スタートします
     </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-
-        // 音声（Web Audio API）
-        let audioCtx = null;
-        function playJumpSound() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            try {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.15);
-                
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.15);
-            } catch (e) {}
-        }
 
         // プレイヤー
         const player = {
@@ -81,29 +57,32 @@
         let obstacles = [];
         let gameSpeed = 5;
         let score = 0;
+        let isStarted = false;
         let isGameOver = false;
-        let frameCount = 0;
+        
+        let nextObstacleTimer = 0; // 障害物が出るまでのカウントダウン
 
-        // キャラクター画像読み込み
+        // 画像読み込み
         const charImage = new Image();
         let imageLoaded = false;
 
-        charImage.onload = () => {
-            imageLoaded = true;
-        };
+        charImage.onload = () => { imageLoaded = true; };
         charImage.onerror = () => {
-            // TTK_2.PNGで見つからない場合、小文字やjpgも試す
             if (charImage.src.endsWith('TTK_2.PNG')) {
                 charImage.src = 'TTK_2.png';
             } else if (charImage.src.endsWith('TTK_2.png')) {
                 charImage.src = 'TTK_2.jpg';
             }
         };
-        // 初期読み込み指定
         charImage.src = 'TTK_2.PNG';
 
         // 操作
-        function jump() {
+        function triggerAction() {
+            if (!isStarted) {
+                isStarted = true;
+                resetGame();
+                return;
+            }
             if (isGameOver) {
                 resetGame();
                 return;
@@ -111,19 +90,18 @@
             if (player.isGrounded) {
                 player.vy = player.jumpPower;
                 player.isGrounded = false;
-                playJumpSound();
             }
         }
 
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
                 e.preventDefault();
-                jump();
+                triggerAction();
             }
         });
 
         canvas.addEventListener('click', () => {
-            jump();
+            triggerAction();
         });
 
         function resetGame() {
@@ -131,13 +109,19 @@
             score = 0;
             gameSpeed = 5;
             isGameOver = false;
+            isStarted = true;
             player.y = 250;
             player.vy = 0;
+            nextObstacleTimer = 60; // 最初に出るまでのフレーム数
+        }
+
+        // ランダムな数値を取得するヘルパー関数
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
         }
 
         function update() {
-            if (!isGameOver) {
-                frameCount++;
+            if (isStarted && !isGameOver) {
                 score++;
 
                 player.vy += player.gravity;
@@ -150,13 +134,19 @@
                     player.isGrounded = true;
                 }
 
-                if (frameCount % 100 === 0) {
+                // ランダムなタイミングで障害物を生成（スピードに応じて間隔を調整）
+                nextObstacleTimer--;
+                if (nextObstacleTimer <= 0) {
                     obstacles.push({
                         x: canvas.width,
                         y: 270,
                         width: 30,
                         height: 30
                     });
+                    // 次の障害物までの間隔をランダムに設定（例: 60〜130フレームの間）
+                    const minInterval = Math.max(40, 70 - Math.floor(score / 200));
+                    const maxInterval = Math.max(80, 140 - Math.floor(score / 200));
+                    nextObstacleTimer = getRandomInt(minInterval, maxInterval);
                 }
 
                 for (let i = obstacles.length - 1; i >= 0; i--) {
@@ -176,7 +166,8 @@
                     }
                 }
 
-                gameSpeed = 5 + Math.floor(score / 500);
+                // スコアに応じて少しずつスピードアップ
+                gameSpeed = 5 + Math.floor(score / 400);
             }
         }
 
@@ -187,7 +178,7 @@
             ctx.fillStyle = '#555';
             ctx.fillRect(0, 330, canvas.width, 70);
 
-            // プレイヤー描画（画像があれば画像、なければ四角形）
+            // プレイヤー
             if (imageLoaded) {
                 ctx.drawImage(charImage, player.x, player.y, player.width, player.height);
             } else {
@@ -206,11 +197,21 @@
             ctx.font = '20px sans-serif';
             ctx.fillText(`SCORE: ${score}`, 20, 30);
 
-            // ゲームオーバー
+            // スタート前画面
+            if (!isStarted) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#fff';
+                ctx.font = '28px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('クリック または スペースキーでスタート', canvas.width / 2, canvas.height / 2);
+                ctx.textAlign = 'left';
+            }
+
+            // ゲームオーバー画面
             if (isGameOver) {
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
                 ctx.fillStyle = '#fff';
                 ctx.font = '30px sans-serif';
                 ctx.textAlign = 'center';
