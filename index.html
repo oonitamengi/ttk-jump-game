@@ -5,44 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ジャンプゲーム</title>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #222;
-            color: #fff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            font-family: sans-serif;
-            overflow: hidden;
-        }
-        canvas {
-            background: #333;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            cursor: pointer;
-        }
-        .instructions {
-            margin-top: 15px;
-            font-size: 14px;
-            color: #aaa;
-            text-align: center;
-        }
+        body { margin: 0; padding: 0; background: #222; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; overflow: hidden; }
+        canvas { background: #333; box-shadow: 0 4px 15px rgba(0,0,0,0.5); cursor: pointer; }
+        .instructions { margin-top: 15px; font-size: 14px; color: #aaa; text-align: center; }
     </style>
 </head>
 <body>
 
     <canvas id="gameCanvas" width="800" height="400"></canvas>
     <div class="instructions">
-        [Space] キーまたは画面クリックでジャンプ / スタートします
+        [Space] / 画面クリックでジャンプ・二段階ジャンプ / スタートします
     </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
-        // プレイヤー
         const player = {
             x: 100,
             y: 250,
@@ -51,45 +29,41 @@
             vy: 0,
             gravity: 0.8,
             jumpPower: -13,
-            isGrounded: false
+            doubleJumpPower: -11,
+            jumpCount: 0
         };
+
+        const groundLevel = 300;
 
         let obstacles = [];
         let gameSpeed = 5;
         let score = 0;
         let isStarted = false;
         let isGameOver = false;
-        
-        let nextObstacleTimer = 0; // 障害物が出るまでのカウントダウン
+        let nextObstacleTimer = 0;
 
-        // 画像読み込み
         const charImage = new Image();
         let imageLoaded = false;
-
         charImage.onload = () => { imageLoaded = true; };
         charImage.onerror = () => {
-            if (charImage.src.endsWith('TTK_2.PNG')) {
-                charImage.src = 'TTK_2.png';
-            } else if (charImage.src.endsWith('TTK_2.png')) {
-                charImage.src = 'TTK_2.jpg';
-            }
+            if (charImage.src.endsWith('TTK_2.PNG')) charImage.src = 'TTK_2.png';
+            else if (charImage.src.endsWith('TTK_2.png')) charImage.src = 'TTK_2.jpg';
         };
         charImage.src = 'TTK_2.PNG';
 
-        // 操作
         function triggerAction() {
-            if (!isStarted) {
-                isStarted = true;
+            if (!isStarted || isGameOver) {
                 resetGame();
                 return;
             }
-            if (isGameOver) {
-                resetGame();
-                return;
-            }
-            if (player.isGrounded) {
-                player.vy = player.jumpPower;
-                player.isGrounded = false;
+
+            if (player.jumpCount < 2) {
+                if (player.jumpCount === 0) {
+                    player.vy = player.jumpPower;
+                } else {
+                    player.vy = player.doubleJumpPower;
+                }
+                player.jumpCount++;
             }
         }
 
@@ -110,14 +84,55 @@
             gameSpeed = 5;
             isGameOver = false;
             isStarted = true;
-            player.y = 250;
+            player.y = groundLevel;
             player.vy = 0;
-            nextObstacleTimer = 60; // 最初に出るまでのフレーム数
+            player.jumpCount = 0;
+            nextObstacleTimer = 60;
         }
 
-        // ランダムな数値を取得するヘルパー関数
         function getRandomInt(min, max) {
             return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function createObstacle() {
+            // ランダムに障害物の種類を決定
+            // 0: 地面の障害物（ジャンプで避ける）
+            // 1: 低いプテラノドン（ジャンプで避ける）
+            // 2: 高いプテラノドン（ジャンプするとぶつかるため、くぐる必要がある）
+            const typeRand = Math.random();
+            let newObstacle;
+
+            if (typeRand < 0.4) {
+                newObstacle = {
+                    type: 'ground',
+                    x: canvas.width,
+                    y: 270,
+                    width: 30,
+                    height: 30,
+                    color: '#ff3333'
+                };
+            } else if (typeRand < 0.7) {
+                newObstacle = {
+                    type: 'ptera_low',
+                    x: canvas.width,
+                    y: 220, // プレイヤーが少しジャンプして避ける高さ
+                    width: 50,
+                    height: 30,
+                    color: '#9b59b6',
+                    speedX: gameSpeed * 1.3
+                };
+            } else {
+                newObstacle = {
+                    type: 'ptera_high',
+                    x: canvas.width,
+                    y: 130, // 高い位置（ジャンプすると当たってしまう）
+                    width: 50,
+                    height: 30,
+                    color: '#8e44ad',
+                    speedX: gameSpeed * 1.4
+                };
+            }
+            obstacles.push(newObstacle);
         }
 
         function update() {
@@ -127,46 +142,42 @@
                 player.vy += player.gravity;
                 player.y += player.vy;
 
-                const groundLevel = 300;
                 if (player.y >= groundLevel) {
                     player.y = groundLevel;
                     player.vy = 0;
-                    player.isGrounded = true;
+                    player.jumpCount = 0;
                 }
 
-                // ランダムなタイミングで障害物を生成（スピードに応じて間隔を調整）
                 nextObstacleTimer--;
                 if (nextObstacleTimer <= 0) {
-                    obstacles.push({
-                        x: canvas.width,
-                        y: 270,
-                        width: 30,
-                        height: 30
-                    });
-                    // 次の障害物までの間隔をランダムに設定（例: 60〜130フレームの間）
-                    const minInterval = Math.max(40, 70 - Math.floor(score / 200));
-                    const maxInterval = Math.max(80, 140 - Math.floor(score / 200));
+                    createObstacle();
+                    const minInterval = Math.max(40, 90 - Math.floor(score / 250));
+                    const maxInterval = Math.max(80, 170 - Math.floor(score / 250));
                     nextObstacleTimer = getRandomInt(minInterval, maxInterval);
                 }
 
                 for (let i = obstacles.length - 1; i >= 0; i--) {
-                    obstacles[i].x -= gameSpeed;
+                    let obs = obstacles[i];
+                    if (obs.type === 'ground') {
+                        obs.x -= gameSpeed;
+                    } else {
+                        obs.x -= obs.speedX;
+                    }
 
                     if (
-                        player.x < obstacles[i].x + obstacles[i].width &&
-                        player.x + player.width > obstacles[i].x &&
-                        player.y < obstacles[i].y + obstacles[i].height &&
-                        player.y + player.height > obstacles[i].y
+                        player.x < obs.x + obs.width &&
+                        player.x + player.width > obs.x &&
+                        player.y < obs.y + obs.height &&
+                        player.y + player.height > obs.y
                     ) {
                         isGameOver = true;
                     }
 
-                    if (obstacles[i].x + obstacles[i].width < 0) {
+                    if (obs.x + obs.width < 0) {
                         obstacles.splice(i, 1);
                     }
                 }
 
-                // スコアに応じて少しずつスピードアップ
                 gameSpeed = 5 + Math.floor(score / 400);
             }
         }
@@ -174,11 +185,9 @@
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 地面
             ctx.fillStyle = '#555';
             ctx.fillRect(0, 330, canvas.width, 70);
 
-            // プレイヤー
             if (imageLoaded) {
                 ctx.drawImage(charImage, player.x, player.y, player.width, player.height);
             } else {
@@ -186,18 +195,15 @@
                 ctx.fillRect(player.x, player.y, player.width, player.height);
             }
 
-            // 障害物
-            ctx.fillStyle = '#ff3333';
             for (let obs of obstacles) {
+                ctx.fillStyle = obs.color;
                 ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
             }
 
-            // スコア
             ctx.fillStyle = '#fff';
             ctx.font = '20px sans-serif';
             ctx.fillText(`SCORE: ${score}`, 20, 30);
 
-            // スタート前画面
             if (!isStarted) {
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -208,7 +214,6 @@
                 ctx.textAlign = 'left';
             }
 
-            // ゲームオーバー画面
             if (isGameOver) {
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
