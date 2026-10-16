@@ -1,600 +1,161 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TTK Jump Adventure</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap');
-        body {
-            font-family: 'Fredoka', sans-serif;
-            touch-action: manipulation;
-            user-select: none;
-            -webkit-user-select: none;
-        }
-        canvas {
-            image-rendering: pixelated;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TTK Jump Game</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+    body {
+      background-color: #121214;
+      color: #ffffff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    #game-container {
+      position: relative;
+      width: 800px;
+      height: 450px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 3px solid #333;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: #111;
+    }
+    .ui-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 15px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .score-container {
+      font-size: 24px;
+      font-weight: bold;
+      color: #fff;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    }
+    .badge {
+      font-size: 12px;
+      background: rgba(255,255,255,0.15);
+      padding: 4px 8px;
+      border-radius: 4px;
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .controls-hint {
+      position: absolute;
+      bottom: 20px;
+      width: 100%;
+      text-align: center;
+      font-size: 14px;
+      color: rgba(255,255,255,0.7);
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    }
+    .file-input-wrapper {
+      pointer-events: auto;
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      z-index: 10;
+    }
+    .file-input-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      backdrop-filter: blur(5px);
+      transition: all 0.2s;
+    }
+    .file-input-btn:hover {
+      background: rgba(255, 255, 255, 0.4);
+    }
+    input[type="file"] {
+      display: none;
+    }
+  </style>
 </head>
-<body class="bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 min-h-screen text-white flex flex-col items-center justify-center p-4">
+<body>
 
-    <!-- ゲームコンテナ -->
-    <div class="relative w-full max-w-4xl bg-black/40 backdrop-blur-md rounded-3xl p-4 shadow-2xl border border-white/10 flex flex-col items-center">
-        
-        <!-- ヘッダー情報 -->
-        <div class="w-full flex justify-between items-center mb-3 px-2">
-            <div class="flex items-center gap-3">
-                <h1 class="text-2xl md:text-3xl font-bold tracking-wider text-pink-400 drop-shadow-[0_2px_4px_rgba(236,72,153,0.5)]">TTK ADVENTURE</h1>
-                <span id="charStatusTag" class="bg-white/10 text-xs px-2.5 py-1 rounded-full text-purple-200 border border-white/5">Custom Image / Clay</span>
-            </div>
-            <div class="flex gap-6 text-lg md:text-xl font-semibold">
-                <div class="bg-black/30 px-4 py-1 rounded-xl border border-white/10">
-                    スコア: <span id="scoreVal" class="text-yellow-400">0</span>
-                </div>
-                <div class="bg-black/30 px-4 py-1 rounded-xl border border-white/10">
-                    ハイスコア: <span id="highScoreVal" class="text-cyan-400">0</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- キャンバス本体 -->
-        <div class="relative w-full aspect-[2/1] rounded-2xl overflow-hidden shadow-inner border-2 border-white/20 bg-slate-950">
-            <canvas id="gameCanvas" class="w-full h-full block cursor-pointer"></canvas>
-
-            <!-- スタート / ゲームオーバー オーバーレイ -->
-            <div id="overlay" class="absolute inset-0 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center transition-opacity duration-300">
-                <div class="text-center p-6 max-w-md">
-                    <div id="overlayTitle" class="text-4xl md:text-5xl font-extrabold text-pink-400 mb-2 drop-shadow-lg">TTK JUMP</div>
-                    <p id="overlayDesc" class="text-sm md:text-base text-gray-300 mb-6">スペースキー または 画面タップ でジャンプ！<br>空中でもう一度押すと2段ジャンプ！</p>
-                    <button id="actionBtn" class="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-bold text-xl px-8 py-3.5 rounded-2xl shadow-lg transform active:scale-95 transition-all border border-pink-300/30">
-                        ゲームスタート
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- コントロール説明 -->
-        <div class="mt-4 flex flex-wrap justify-center gap-4 text-xs md:text-sm text-gray-400 text-center">
-            <span class="bg-white/5 px-3 py-1.5 rounded-xl border border-white/5">🖱️ クリック / 📱 タップ / ⌨️ スペースキー：ジャンプ（2段ジャンプ対応）</span>
-        </div>
+<div id="game-container">
+  <div class="file-input-wrapper">
+    <label class="file-input-btn">
+      📁 画像を選択
+      <input type="file" id="imageLoader" accept="image/*">
+    </label>
+  </div>
+  
+  <div class="ui-overlay">
+    <div class="header">
+      <div></div>
+      <div id="modeBadge" class="badge">Image: TTK_2.PNG</div>
+      <div class="score-container">
+        SCORE: <span id="score">0</span> | HIGH: <span id="highscore">0</span>
+      </div>
     </div>
+    <div class="controls-hint" id="hint">SPACE キーまたはクリックでジャンプ (2段ジャンプ可)</div>
+  </div>
+  
+  <canvas id="gameCanvas" width="800" height="450"></canvas>
+</div>
 
-    <!-- メッセージボックス（alert代わりのモーダル） -->
-    <div id="msgModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-        <div class="bg-slate-900 border border-white/20 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl">
-            <h3 id="msgTitle" class="text-xl font-bold text-pink-400 mb-2">お知らせ</h3>
-            <p id="msgText" class="text-gray-300 text-sm mb-6">メッセージ内容</p>
-            <button onclick="closeModal()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2.5 rounded-xl transition-all">とじる</button>
-        </div>
-    </div>
+<script>
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const highscoreEl = document.getElementById('highscore');
+  const modeBadge = document.getElementById('modeBadge');
+  const hintEl = document.getElementById('hint');
+  const imageLoader = document.getElementById('imageLoader');
 
-    <script>
-        // ==========================================
-        // 1. 画像設定（同じフォルダ内の画像名）
-        // ==========================================
-        const PLAYER_IMAGE_SRC = 'TTK_2.jpg'; // ここで画像ファイル名を指定
+  // 設定項目
+  const PRIMARY_IMAGE_SRC = 'TTK_2.PNG';
+  const FALLBACK_SOURCES = ['TTK_2.png', 'TTK_2.jpg', 'TTK_2.jpeg'];
 
-        let playerImg = new Image();
-        let isImageLoaded = false;
+  let audioCtx = null;
+  function initAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  }
 
-        // 画像の読み込み処理（エラー時は自動でフォールバック）
-        playerImg.onload = function() {
-            isImageLoaded = true;
-            document.getElementById('charStatusTag').innerText = 'Image: ' + PLAYER_IMAGE_SRC;
-            document.getElementById('charStatusTag').className = 'bg-emerald-500/20 text-xs px-2.5 py-1 rounded-full text-emerald-300 border border-emerald-500/30';
-        };
+  function playSound(type) {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
 
-        playerImg.onerror = function() {
-            isImageLoaded = false;
-            console.warn(`画像 "${PLAYER_IMAGE_SRC}" の読み込みに失敗しました。フォールバックキャラクター（粘土風TTK）を使用します。`);
-            document.getElementById('charStatusTag').innerText = 'Fallback Clay Mode';
-            document.getElementById('charStatusTag').className = 'bg-amber-500/20 text-xs px-2.5 py-1 rounded-full text-amber-300 border border-amber-500/30';
-        };
-
-        playerImg.src = PLAYER_IMAGE_SRC;
-
-        // --- Web Audio API サウンドシステム ---
-        let audioCtx = null;
-        function initAudio() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-        }
-
-        function playSound(type) {
-            if (!audioCtx) return;
-            try {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                const now = audioCtx.currentTime;
-
-                if (type === 'jump') {
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(250, now);
-                    osc.frequency.exponentialRampToValueAtTime(550, now + 0.15);
-                    gain.gain.setValueAtTime(0.15, now);
-                    gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
-                    osc.start(now);
-                    osc.stop(now + 0.15);
-                } else if (type === 'score') {
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(440, now);
-                    osc.frequency.setValueAtTime(880, now + 0.08);
-                    gain.gain.setValueAtTime(0.1, now);
-                    gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
-                    osc.start(now);
-                    osc.stop(now + 0.2);
-                } else if (type === 'hit') {
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(180, now);
-                    osc.frequency.linearRampToValueAtTime(60, now + 0.3);
-                    gain.gain.setValueAtTime(0.2, now);
-                    gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
-                    osc.start(now);
-                    osc.stop(now + 0.3);
-                }
-            } catch (e) {
-                console.log("Audio play error", e);
-            }
-        }
-
-        // --- カスタムモーダル ---
-        function showMsg(title, text) {
-            document.getElementById('msgTitle').innerText = title;
-            document.getElementById('msgText').innerText = text;
-            document.getElementById('msgModal').classList.remove('hidden');
-            document.getElementById('msgModal').classList.add('flex');
-        }
-        function closeModal() {
-            document.getElementById('msgModal').classList.remove('flex');
-            document.getElementById('msgModal').classList.add('hidden');
-        }
-
-        // --- ゲームエンジン本体 ---
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-
-        function resizeCanvas() {
-            canvas.width = 800;
-            canvas.height = 400;
-        }
-        resizeCanvas();
-
-        // ゲーム状態
-        let gameState = 'START'; // 'START', 'PLAYING', 'GAMEOVER'
-        let score = 0;
-        let highScore = localStorage.getItem('ttk_highscore') || 0;
-        document.getElementById('highScoreVal').innerText = highScore;
-
-        let gameSpeed = 5;
-        let distanceTravelled = 0;
-
-        // 背景オブジェクト
-        let stars = [];
-        let clouds = [];
-        for (let i = 0; i < 30; i++) {
-            stars.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * (canvas.height * 0.7),
-                size: Math.random() * 2 + 1,
-                speed: Math.random() * 0.5 + 0.2
-            });
-        }
-        for (let i = 0; i < 5; i++) {
-            clouds.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * 150 + 20,
-                width: Math.random() * 80 + 40,
-                speed: Math.random() * 0.8 + 0.4
-            });
-        }
-
-        // プレイヤーオブジェクト
-        const player = {
-            x: 100,
-            y: 250,
-            width: 70,
-            height: 85,
-            vy: 0,
-            gravity: 0.65,
-            jumpPower: -11.5,
-            groundY: 250,
-            isJumping: false,
-            jumpsLeft: 2,
-            wingAngle: 0
-        };
-
-        // 障害物・エフェクト
-        let obstacles = [];
-        let obstacleTimer = 0;
-        let nextObstacleInterval = 120;
-        let particles = [];
-
-        function addParticle(x, y, color) {
-            for (let i = 0; i < 6; i++) {
-                particles.push({
-                    x: x,
-                    y: y,
-                    vx: (Math.random() - 0.5) * 4,
-                    vy: (Math.random() - 0.5) * 4,
-                    size: Math.random() * 6 + 3,
-                    color: color,
-                    life: 30
-                });
-            }
-        }
-
-        // 操作処理
-        function triggerJump() {
-            initAudio();
-            if (gameState === 'START') {
-                startGame();
-            } else if (gameState === 'PLAYING') {
-                if (player.jumpsLeft > 0) {
-                    player.vy = player.jumpPower;
-                    player.isJumping = true;
-                    player.jumpsLeft--;
-                    playSound('jump');
-                    addParticle(player.x + player.width / 2, player.y + player.height, '#f472b6');
-                }
-            } else if (gameState === 'GAMEOVER') {
-                startGame();
-            }
-        }
-
-        window.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' || e.code === 'ArrowUp') {
-                e.preventDefault();
-                triggerJump();
-            }
-        });
-
-        canvas.addEventListener('click', (e) => {
-            e.preventDefault();
-            triggerJump();
-        });
-
-        document.getElementById('actionBtn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            triggerJump();
-        });
-
-        function startGame() {
-            gameState = 'PLAYING';
-            score = 0;
-            distanceTravelled = 0;
-            gameSpeed = 5;
-            obstacles = [];
-            particles = [];
-            obstacleTimer = 0;
-            nextObstacleInterval = 100;
-            player.y = player.groundY;
-            player.vy = 0;
-            player.jumpsLeft = 2;
-            
-            document.getElementById('overlay').classList.add('opacity-0', 'pointer-events-none');
-        }
-
-        function gameOver() {
-            gameState = 'GAMEOVER';
-            playSound('hit');
-            if (score > highScore) {
-                highScore = score;
-                localStorage.setItem('ttk_highscore', highScore);
-                document.getElementById('highScoreVal').innerText = highScore;
-            }
-
-            const overlay = document.getElementById('overlay');
-            document.getElementById('overlayTitle').innerText = 'GAME OVER';
-            document.getElementById('overlayDesc').innerHTML = `スコア: <span class="text-yellow-400 font-bold">${score}</span><br>もう一度挑戦する？`;
-            document.getElementById('actionBtn').innerText = 'リトライ';
-            overlay.classList.remove('opacity-0', 'pointer-events-none');
-        }
-
-        // --- 描画ロジック ---
-        function drawBackground() {
-            const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            bgGrad.addColorStop(0, '#0f172a');
-            bgGrad.addColorStop(0.7, '#1e1b4b');
-            bgGrad.addColorStop(1, '#311042');
-            ctx.fillStyle = bgGrad;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // 星
-            ctx.fillStyle = '#ffffff';
-            stars.forEach(star => {
-                if (gameState === 'PLAYING') {
-                    star.x -= star.speed * (gameSpeed * 0.2);
-                    if (star.x < 0) star.x = canvas.width;
-                }
-                ctx.globalAlpha = Math.sin(Date.now() * 0.003 + star.x) * 0.5 + 0.5;
-                ctx.beginPath();
-                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
-            ctx.globalAlpha = 1.0;
-
-            // 雲
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
-            clouds.forEach(cloud => {
-                if (gameState === 'PLAYING') {
-                    cloud.x -= cloud.speed * (gameSpeed * 0.4);
-                    if (cloud.x + cloud.width < 0) cloud.x = canvas.width + 50;
-                }
-                ctx.beginPath();
-                ctx.roundRect(cloud.x, cloud.y, cloud.width, 25, 12);
-                ctx.fill();
-            });
-
-            // 奥の地面
-            ctx.fillStyle = '#261036';
-            ctx.beginPath();
-            ctx.moveTo(0, 335);
-            for (let x = 0; x <= canvas.width; x += 50) {
-                let y = 335 + Math.sin((x + distanceTravelled * 0.5) * 0.01) * 15;
-                ctx.lineTo(x, y);
-            }
-            ctx.lineTo(canvas.width, canvas.height);
-            ctx.lineTo(0, canvas.height);
-            ctx.fill();
-
-            // メイン地面
-            ctx.fillStyle = '#4c1d95';
-            ctx.fillRect(0, 335, canvas.width, canvas.height - 335);
-            
-            ctx.strokeStyle = '#c084fc';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(0, 335);
-            ctx.lineTo(canvas.width, 335);
-            ctx.stroke();
-        }
-
-        // フォールバック用の粘土風TTKキャラ描画
-        function drawClayFallbackCharacter() {
-            // 1. 粘土質本体（上半身）
-            ctx.fillStyle = '#e8a598';
-            ctx.strokeStyle = '#b87568';
-            ctx.lineWidth = 3;
-
-            ctx.beginPath();
-            ctx.arc(0, -10, 32, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-
-            // 下半身（「TTK」文字の入る部分）
-            ctx.beginPath();
-            ctx.roundRect(-26, 12, 52, 32, 10);
-            ctx.fill();
-            ctx.stroke();
-
-            // 2. 鼻
-            ctx.fillStyle = '#e09a8d';
-            ctx.beginPath();
-            ctx.ellipse(-4, -12, 11, 24, -0.1, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-
-            // 3. 目玉
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(-16, -32, 10, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            ctx.fillStyle = '#1e1b4b';
-            ctx.beginPath();
-            ctx.arc(-14 + Math.sin(Date.now() * 0.01) * 2, -32, 5, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(16, -28, 11, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            ctx.fillStyle = '#1e1b4b';
-            ctx.beginPath();
-            ctx.arc(15 + Math.cos(Date.now() * 0.012) * 2, -28, 5.5, 0, Math.PI * 2);
-            ctx.fill();
-
-            // 4. 文字
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 20px "Fredoka", sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.shadowColor = 'rgba(0,0,0,0.8)';
-            ctx.shadowBlur = 4;
-            ctx.fillText('TTK', 0, 28);
-        }
-
-        function drawPlayer() {
-            ctx.save();
-            ctx.translate(player.x + player.width / 2, player.y + player.height / 2);
-
-            // 傾き効果
-            let tilt = player.vy * 0.03;
-            ctx.rotate(tilt);
-
-            // 背景の翼（画像モード・フォールバックモード共通で躍動感を付与）
-            player.wingAngle = Math.sin(Date.now() * 0.015) * 0.25;
-            ctx.save();
-            ctx.translate(-25, -10);
-            ctx.rotate(player.wingAngle - 0.2);
-            ctx.fillStyle = '#ffffff';
-            ctx.shadowColor = 'rgba(255,255,255,0.6)';
-            ctx.shadowBlur = 10;
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.quadraticCurveTo(-25, -20, -35, -5);
-            ctx.quadraticCurveTo(-20, 20, 0, 10);
-            ctx.fill();
-            ctx.restore();
-
-            ctx.save();
-            ctx.translate(25, -10);
-            ctx.rotate(-player.wingAngle + 0.2);
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.quadraticCurveTo(25, -20, 35, -5);
-            ctx.quadraticCurveTo(20, 20, 0, 10);
-            ctx.fill();
-            ctx.restore();
-
-            // 描画分岐（指定画像 vs フォールバック粘土キャラ）
-            if (isImageLoaded) {
-                // ドロップシャドウ
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-                ctx.shadowBlur = 8;
-                ctx.shadowOffsetY = 4;
-                
-                // 画像を枠内に描画（アスペクト維持考慮）
-                ctx.drawImage(
-                    playerImg,
-                    -player.width / 2,
-                    -player.height / 2,
-                    player.width,
-                    player.height
-                );
-            } else {
-                // フォールバック描画
-                drawClayFallbackCharacter();
-            }
-
-            ctx.restore();
-        }
-
-        function drawObstacles() {
-            obstacles.forEach(obs => {
-                ctx.save();
-                ctx.translate(obs.x, obs.y);
-
-                if (obs.type === 'spike') {
-                    ctx.fillStyle = '#ec4899';
-                    ctx.strokeStyle = '#831843';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.moveTo(0, obs.height);
-                    ctx.lineTo(obs.width / 2, 0);
-                    ctx.lineTo(obs.width, obs.height);
-                    ctx.closePath();
-                    ctx.fill();
-                    ctx.stroke();
-                } else if (obs.type === 'block') {
-                    ctx.fillStyle = '#06b6d4';
-                    ctx.strokeStyle = '#164e63';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.roundRect(0, 0, obs.width, obs.height, 8);
-                    ctx.fill();
-                    ctx.stroke();
-
-                    ctx.fillStyle = '#155e75';
-                    ctx.fillRect(8, 8, obs.width - 16, obs.height - 16);
-                }
-
-                ctx.restore();
-            });
-        }
-
-        function drawParticles() {
-            particles.forEach((p, index) => {
-                p.x += p.vx;
-                p.y += p.vy;
-                p.life--;
-                ctx.fillStyle = p.color;
-                ctx.globalAlpha = p.life / 30;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.globalAlpha = 1.0;
-
-                if (p.life <= 0) {
-                    particles.splice(index, 1);
-                }
-            });
-        }
-
-        // --- メインループ ---
-        function update() {
-            if (gameState !== 'PLAYING') return;
-
-            // 物理演算
-            player.vy += player.gravity;
-            player.y += player.vy;
-
-            if (player.y >= player.groundY) {
-                player.y = player.groundY;
-                player.vy = 0;
-                player.isJumping = false;
-                player.jumpsLeft = 2;
-            }
-
-            // スコアとスピード
-            distanceTravelled += gameSpeed;
-            score = Math.floor(distanceTravelled / 10);
-            document.getElementById('scoreVal').innerText = score;
-
-            gameSpeed = 5 + Math.floor(score / 150) * 0.8;
-            if (gameSpeed > 11) gameSpeed = 11;
-
-            // 障害物生成
-            obstacleTimer++;
-            if (obstacleTimer >= nextObstacleInterval) {
-                obstacleTimer = 0;
-                nextObstacleInterval = Math.random() * 50 + Math.max(60, 130 - score * 0.2);
-
-                const isSpike = Math.random() > 0.4;
-                obstacles.push({
-                    x: canvas.width + 50,
-                    y: isSpike ? 335 - 45 : 335 - Math.floor(Math.random() * 45 + 40),
-                    width: isSpike ? 35 : 45,
-                    height: isSpike ? 45 : Math.floor(Math.random() * 30 + 40),
-                    type: isSpike ? 'spike' : 'block'
-                });
-            }
-
-            // 当たり判定
-            for (let i = obstacles.length - 1; i >= 0; i--) {
-                let obs = obstacles[i];
-                obs.x -= gameSpeed;
-
-                if (obs.x + obs.width < 0) {
-                    obstacles.splice(i, 1);
-                    continue;
-                }
-
-                const padding = 12;
-                if (
-                    player.x + padding < obs.x + obs.width - padding &&
-                    player.x + player.width - padding > obs.x + padding &&
-                    player.y + padding < obs.y + obs.height - padding &&
-                    player.y + player.height - padding > obs.y + padding
-                ) {
-                    gameOver();
-                }
-            }
-        }
-
-        function render() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawBackground();
-            drawParticles();
-            drawPlayer();
-            drawObstacles();
-        }
-
-        function gameLoop() {
-            update();
-            render();
-            requestAnimationFrame(gameLoop);
-        }
-
-        render();
-        requestAnimationFrame(gameLoop);
-    </script>
-</body>
-</html>
+    const now = audioCtx.currentTime;
+    if (type === 'jump') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.exponential
