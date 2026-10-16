@@ -2,19 +2,62 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ジャンプゲーム</title>
     <style>
-        body { margin: 0; padding: 0; background: #222; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; overflow: hidden; }
-        canvas { background: #333; box-shadow: 0 4px 15px rgba(0,0,0,0.5); cursor: pointer; }
-        .instructions { margin-top: 15px; font-size: 14px; color: #aaa; text-align: center; }
+        * {
+            box-sizing: border-box;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        body {
+            margin: 0;
+            padding: 10px;
+            background: #222;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+        .game-container {
+            width: 100%;
+            max-width: 800px;
+            aspect-ratio: 2 / 1;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            background: #333;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            cursor: pointer;
+        }
+        .instructions {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #aaa;
+            text-align: center;
+            padding: 0 10px;
+            line-height: 1.5;
+        }
     </style>
 </head>
 <body>
 
-    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <div class="game-container">
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+    </div>
     <div class="instructions">
-        [Space] / 画面クリックでジャンプ（空中で2段ジャンプ可） / スタートします
+        [Space]キー または 画面タップでジャンプ（空中で2段ジャンプ可）<br>スタートします
     </div>
 
     <script>
@@ -51,7 +94,10 @@
         };
         charImage.src = 'TTK_2.PNG';
 
-        function triggerAction() {
+        function triggerAction(e) {
+            if (e) {
+                e.preventDefault();
+            }
             if (!isStarted || isGameOver) {
                 resetGame();
                 return;
@@ -75,7 +121,12 @@
             }
         });
 
-        canvas.addEventListener('click', () => {
+        // スマホのタップやPCのクリックに両対応
+        canvas.addEventListener('touchstart', (e) => {
+            triggerAction(e);
+        }, { passive: false });
+
+        canvas.addEventListener('click', (e) => {
             triggerAction();
         });
 
@@ -96,10 +147,6 @@
         }
 
         function createObstacle() {
-            // 多様な障害物のランダム生成
-            // 0: 地面のサボテン等（通常ジャンプで避ける）
-            // 1: 低空プテラ（要ジャンプ）
-            // 2: 高空プテラ（ジャンプするとぶつかるため、くぐる or 着地を合わせる）
             const rand = Math.random();
             let newObstacle;
 
@@ -107,7 +154,7 @@
                 newObstacle = {
                     type: 'ground',
                     x: canvas.width,
-                    y: 260, // 地面付近
+                    y: 260,
                     width: 30,
                     height: 40,
                     color: '#e74c3c'
@@ -116,7 +163,7 @@
                 newObstacle = {
                     type: 'ptera_low',
                     x: canvas.width,
-                    y: 210, // 少し低い位置を飛ぶプテラ
+                    y: 210,
                     width: 45,
                     height: 25,
                     color: '#9b59b6',
@@ -126,7 +173,7 @@
                 newObstacle = {
                     type: 'ptera_high',
                     x: canvas.width,
-                    y: 130, // 高い位置を飛ぶプテラ（頭上注意）
+                    y: 130,
                     width: 45,
                     height: 25,
                     color: '#8e44ad',
@@ -151,7 +198,7 @@
                     player.jumpCount = 0;
                 }
 
-                // 障害物の生成タイマー（ランダムなゆらぎを持たせる）
+                // 障害物の生成タイマー
                 nextObstacleTimer--;
                 if (nextObstacleTimer <= 0) {
                     createObstacle();
@@ -164,14 +211,12 @@
                 for (let i = obstacles.length - 1; i >= 0; i--) {
                     let obs = obstacles[i];
                     
-                    // プテラは少しスピードを変える
                     let currentSpeed = gameSpeed;
                     if (obs.type.startsWith('ptera')) {
                         currentSpeed *= obs.speedMultiplier;
                     }
                     obs.x -= currentSpeed;
 
-                    // 判定に少し余裕（余白）を持たせる
                     const padding = 6;
                     if (
                         player.x + padding < obs.x + obs.width - padding &&
@@ -182,13 +227,11 @@
                         isGameOver = true;
                     }
 
-                    // 画面外へ出た障害物を削除
                     if (obs.x + obs.width < 0) {
                         obstacles.splice(i, 1);
                     }
                 }
 
-                // スコアに応じたスピード上昇
                 gameSpeed = 5 + Math.floor(score / 350);
             }
         }
@@ -217,7 +260,6 @@
                 ctx.fillStyle = obs.color;
                 ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
                 
-                // プテラっぽく翼のような簡易マーカーや枠線を付与
                 ctx.strokeStyle = '#fff';
                 ctx.lineWidth = 1;
                 ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
@@ -235,7 +277,7 @@
                 ctx.fillStyle = '#fff';
                 ctx.font = '26px sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText('クリック または スペースキーでスタート', canvas.width / 2, canvas.height / 2);
+                ctx.fillText('画面タップ または スペースキーでスタート', canvas.width / 2, canvas.height / 2);
                 ctx.textAlign = 'left';
             }
 
@@ -248,7 +290,7 @@
                 ctx.textAlign = 'center';
                 ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 15);
                 ctx.font = '16px sans-serif';
-                ctx.fillText('クリック または スペースキーでリトライ', canvas.width / 2, canvas.height / 2 + 25);
+                ctx.fillText('画面タップ または スペースキーでリトライ', canvas.width / 2, canvas.height / 2 + 25);
                 ctx.textAlign = 'left';
             }
         }
