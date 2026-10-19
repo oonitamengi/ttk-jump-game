@@ -26,7 +26,6 @@
             touch-action: manipulation;
         }
 
-        /* レトロ液晶/CRTモニター風の画面外枠 */
         .crt-monitor {
             position: relative;
             width: 95vw;
@@ -52,7 +51,6 @@
             filter: drop-shadow(0 0 4px #00ffcc);
         }
 
-        /* ブラウン管特有のスキャンライン（走査線）効果 */
         .scanlines {
             position: absolute;
             top: 0;
@@ -115,7 +113,6 @@
         let isGameOver = false;
         let nextObstacleTimer = 0;
 
-        // アセット画像の読み込み (TTK_2.PNG, IMG_4627.PNG, IMG_4630.PNG)
         const charImage = new Image();
         let imageLoaded = false;
         charImage.onload = () => { imageLoaded = true; };
@@ -152,7 +149,6 @@
             }
         }
 
-        // キーボード操作（スペースキー）
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
                 e.preventDefault();
@@ -160,7 +156,6 @@
             }
         });
 
-        // モニターエリア全体のタップ/クリック操作
         crtMonitor.addEventListener('pointerdown', (e) => {
             triggerAction(e);
         });
@@ -272,9 +267,7 @@
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // プレイ中の描画
             if (isStarted && !isGameOver) {
-                // 地面（レトログリーン発光ライン）
                 ctx.strokeStyle = '#00ffcc';
                 ctx.shadowColor = '#00ffcc';
                 ctx.shadowBlur = 8;
@@ -285,7 +278,6 @@
                 ctx.stroke();
                 ctx.shadowBlur = 0;
 
-                // プレイヤー（TTK_2.PNG）
                 if (imageLoaded && charImage.complete && charImage.naturalWidth > 0) {
                     const pWidth = 50 * (charImage.naturalWidth / charImage.naturalHeight);
                     ctx.drawImage(charImage, player.x, player.y, pWidth, player.height);
@@ -294,7 +286,6 @@
                     ctx.fillRect(player.x, player.y, player.width, player.height);
                 }
 
-                // 障害物描画
                 for (let obs of obstacles) {
                     if (obs.type === 'ground') {
                         if (flowerLoaded && flowerImage.complete && flowerImage.naturalWidth > 0) {
@@ -313,13 +304,11 @@
                     }
                 }
 
-                // スコア
                 ctx.fillStyle = '#00ffcc';
                 ctx.font = '20px "Courier New", monospace';
                 ctx.fillText(`SCORE: ${score}`, 20, 35);
             }
 
-            // タイトル画面（レトロ緑CRT背景 ＋ TTK_2.PNG ＋ TOBU-YATU）
             if (!isStarted) {
                 ctx.fillStyle = 'rgba(5, 20, 11, 0.9)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -345,7 +334,6 @@
                 ctx.textAlign = 'left';
             }
 
-            // ゲームオーバー画面
             if (isGameOver) {
                 ctx.fillStyle = 'rgba(5, 10, 5, 0.88)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
