@@ -26,6 +26,7 @@
             touch-action: manipulation;
         }
 
+        /* CRTモニター風デザイン */
         .crt-monitor {
             position: relative;
             width: 95vw;
@@ -51,6 +52,7 @@
             filter: drop-shadow(0 0 4px #00ffcc);
         }
 
+        /* 走査線エフェクト */
         .scanlines {
             position: absolute;
             top: 0;
@@ -92,6 +94,7 @@
         const ctx = canvas.getContext('2d');
         const crtMonitor = document.getElementById('crtMonitor');
 
+        // プレイヤーオブジェクト
         const player = {
             x: 100,
             y: 250,
@@ -113,24 +116,29 @@
         let isGameOver = false;
         let nextObstacleTimer = 0;
 
+        // 画像データの読み込みとフォールバック判定
+        let charLoaded = false;
         const charImage = new Image();
-        let imageLoaded = false;
-        charImage.onload = () => { imageLoaded = true; };
+        charImage.onload = () => { charLoaded = true; };
+        charImage.onerror = () => { charLoaded = false; };
         charImage.src = 'TTK_2.PNG';
 
-        const flowerImage = new Image();
         let flowerLoaded = false;
+        const flowerImage = new Image();
         flowerImage.onload = () => { flowerLoaded = true; };
+        flowerImage.onerror = () => { flowerLoaded = false; };
         flowerImage.src = 'IMG_4627.PNG';
 
-        const birdImage = new Image();
         let birdLoaded = false;
+        const birdImage = new Image();
         birdImage.onload = () => { birdLoaded = true; };
+        birdImage.onerror = () => { birdLoaded = false; };
         birdImage.src = 'IMG_4630.PNG';
 
+        // ジャンプ・スタート操作
         function triggerAction(e) {
             if (e) {
-                e.preventDefault();
+                if (e.cancelable) e.preventDefault();
                 e.stopPropagation();
             }
 
@@ -149,6 +157,7 @@
             }
         }
 
+        // イベントリスナー設定
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
                 e.preventDefault();
@@ -268,6 +277,7 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             if (isStarted && !isGameOver) {
+                // 地面
                 ctx.strokeStyle = '#00ffcc';
                 ctx.shadowColor = '#00ffcc';
                 ctx.shadowBlur = 8;
@@ -278,7 +288,8 @@
                 ctx.stroke();
                 ctx.shadowBlur = 0;
 
-                if (imageLoaded && charImage.complete && charImage.naturalWidth > 0) {
+                // プレイヤー描画 (安全策付き)
+                if (charLoaded && charImage.complete && charImage.naturalWidth > 0) {
                     const pWidth = 50 * (charImage.naturalWidth / charImage.naturalHeight);
                     ctx.drawImage(charImage, player.x, player.y, pWidth, player.height);
                 } else {
@@ -286,6 +297,7 @@
                     ctx.fillRect(player.x, player.y, player.width, player.height);
                 }
 
+                // 障害物描画 (安全策付き)
                 for (let obs of obstacles) {
                     if (obs.type === 'ground') {
                         if (flowerLoaded && flowerImage.complete && flowerImage.naturalWidth > 0) {
@@ -304,16 +316,18 @@
                     }
                 }
 
+                // スコア表示
                 ctx.fillStyle = '#00ffcc';
                 ctx.font = '20px "Courier New", monospace';
                 ctx.fillText(`SCORE: ${score}`, 20, 35);
             }
 
+            // タイトル画面
             if (!isStarted) {
                 ctx.fillStyle = 'rgba(5, 20, 11, 0.9)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                if (imageLoaded && charImage.complete && charImage.naturalWidth > 0) {
+                if (charLoaded && charImage.complete && charImage.naturalWidth > 0) {
                     const titleImgHeight = 120;
                     const titleImgWidth = titleImgHeight * (charImage.naturalWidth / charImage.naturalHeight);
                     const imgX = (canvas.width - titleImgWidth) / 2;
@@ -334,6 +348,7 @@
                 ctx.textAlign = 'left';
             }
 
+            // ゲームオーバー画面
             if (isGameOver) {
                 ctx.fillStyle = 'rgba(5, 10, 5, 0.88)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
