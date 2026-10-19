@@ -176,3 +176,204 @@
             player.jumpCount = 0;
             nextObstacleTimer = 50;
         }
+
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function createObstacle() {
+            const rand = Math.random();
+            let newObstacle;
+
+            if (rand < 0.45) {
+                const fHeight = 65;
+                const fWidth = 50;
+                newObstacle = {
+                    type: 'ground',
+                    x: canvas.width,
+                    y: 300 - fHeight,
+                    width: fWidth,
+                    height: fHeight
+                };
+            } else if (rand < 0.75) {
+                const bHeight = 45;
+                const bWidth = 60;
+                newObstacle = {
+                    type: 'bird_low',
+                    x: canvas.width,
+                    y: 200,
+                    width: bWidth,
+                    height: bHeight,
+                    speedMultiplier: 1.2
+                };
+            } else {
+                const bHeight = 45;
+                const bWidth = 60;
+                newObstacle = {
+                    type: 'bird_high',
+                    x: canvas.width,
+                    y: 120,
+                    width: bWidth,
+                    height: bHeight,
+                    speedMultiplier: 1.4
+                };
+            }
+            obstacles.push(newObstacle);
+        }
+
+        function update() {
+            if (isStarted && !isGameOver) {
+                score++;
+
+                player.vy += player.gravity;
+                player.y += player.vy;
+
+                if (player.y >= groundLevel) {
+                    player.y = groundLevel;
+                    player.vy = 0;
+                    player.jumpCount = 0;
+                }
+
+                nextObstacleTimer--;
+                if (nextObstacleTimer <= 0) {
+                    createObstacle();
+                    const minInterval = Math.max(35, 75 - Math.floor(score / 300));
+                    const maxInterval = Math.max(70, 140 - Math.floor(score / 300));
+                    nextObstacleTimer = getRandomInt(minInterval, maxInterval);
+                }
+
+                for (let i = obstacles.length - 1; i >= 0; i--) {
+                    let obs = obstacles[i];
+                    let currentSpeed = gameSpeed;
+                    if (obs.type.startsWith('bird')) {
+                        currentSpeed *= obs.speedMultiplier;
+                    }
+                    obs.x -= currentSpeed;
+
+                    const padding = 6;
+                    if (
+                        player.x + padding < obs.x + obs.width - padding &&
+                        player.x + player.width - padding > obs.x + padding &&
+                        player.y + padding < obs.y + obs.height - padding &&
+                        player.y + player.height - padding > obs.y + padding
+                    ) {
+                        isGameOver = true;
+                    }
+
+                    if (obs.x + obs.width < 0) {
+                        obstacles.splice(i, 1);
+                    }
+                }
+
+                gameSpeed = 5 + Math.floor(score / 350);
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // プレイ中の描画
+            if (isStarted && !isGameOver) {
+                // 地面（レトログリーン発光ライン）
+                ctx.strokeStyle = '#00ffcc';
+                ctx.shadowColor = '#00ffcc';
+                ctx.shadowBlur = 8;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(0, 300);
+                ctx.lineTo(canvas.width, 300);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // プレイヤー（TTK_2.PNG）
+                if (imageLoaded && charImage.complete && charImage.naturalWidth > 0) {
+                    const pWidth = 50 * (charImage.naturalWidth / charImage.naturalHeight);
+                    ctx.drawImage(charImage, player.x, player.y, pWidth, player.height);
+                } else {
+                    ctx.fillStyle = '#00ffcc';
+                    ctx.fillRect(player.x, player.y, player.width, player.height);
+                }
+
+                // 障害物描画
+                for (let obs of obstacles) {
+                    if (obs.type === 'ground') {
+                        if (flowerLoaded && flowerImage.complete && flowerImage.naturalWidth > 0) {
+                            ctx.drawImage(flowerImage, obs.x, obs.y, obs.width, obs.height);
+                        } else {
+                            ctx.fillStyle = '#ff3366';
+                            ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                        }
+                    } else if (obs.type.startsWith('bird')) {
+                        if (birdLoaded && birdImage.complete && birdImage.naturalWidth > 0) {
+                            ctx.drawImage(birdImage, obs.x, obs.y, obs.width, obs.height);
+                        } else {
+                            ctx.fillStyle = '#33ccff';
+                            ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                        }
+                    }
+                }
+
+                // スコア
+                ctx.fillStyle = '#00ffcc';
+                ctx.font = '20px "Courier New", monospace';
+                ctx.fillText(`SCORE: ${score}`, 20, 35);
+            }
+
+            // タイトル画面（レトロ緑CRT背景 ＋ TTK_2.PNG ＋ TOBU-YATU）
+            if (!isStarted) {
+                ctx.fillStyle = 'rgba(5, 20, 11, 0.9)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                if (imageLoaded && charImage.complete && charImage.naturalWidth > 0) {
+                    const titleImgHeight = 120;
+                    const titleImgWidth = titleImgHeight * (charImage.naturalWidth / charImage.naturalHeight);
+                    const imgX = (canvas.width - titleImgWidth) / 2;
+                    const imgY = canvas.height / 2 - 95;
+                    ctx.drawImage(charImage, imgX, imgY, titleImgWidth, titleImgHeight);
+                }
+
+                ctx.fillStyle = '#00ffcc';
+                ctx.shadowColor = '#00ffcc';
+                ctx.shadowBlur = 10;
+                ctx.font = 'bold 32px "Courier New", monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('TOBU-YATU', canvas.width / 2, canvas.height / 2 + 55);
+
+                ctx.font = '18px "Courier New", monospace';
+                ctx.fillText('画面をタップしてスタート', canvas.width / 2, canvas.height / 2 + 95);
+                ctx.shadowBlur = 0;
+                ctx.textAlign = 'left';
+            }
+
+            // ゲームオーバー画面
+            if (isGameOver) {
+                ctx.fillStyle = 'rgba(5, 10, 5, 0.88)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.fillStyle = '#ff3366';
+                ctx.shadowColor = '#ff3366';
+                ctx.shadowBlur = 12;
+                ctx.font = 'bold 32px "Courier New", monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 20);
+
+                ctx.fillStyle = '#00ffcc';
+                ctx.shadowColor = '#00ffcc';
+                ctx.shadowBlur = 8;
+                ctx.font = '16px "Courier New", monospace';
+                ctx.fillText('画面をタップしてリトライ', canvas.width / 2, canvas.height / 2 + 25);
+                ctx.shadowBlur = 0;
+                ctx.textAlign = 'left';
+            }
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        loop();
+    </script>
+</body>
+</html>
