@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>レトロテレビ・ジャンプゲーム</title>
+    <title>レトロCRT・ジャンプゲーム</title>
     <style>
         * {
             box-sizing: border-box;
@@ -14,28 +14,48 @@
             padding: 0;
         }
         body {
-            background: #111;
-            color: #fff;
+            background: #080a08;
+            color: #00ffcc;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            font-family: sans-serif;
+            font-family: 'Courier New', Courier, monospace, sans-serif;
             overflow: hidden;
             touch-action: manipulation;
         }
 
-        .game-wrapper {
-            width: 95vw;
-            max-width: 800px;
-            aspect-ratio: 2 / 1;
+        /* テレビ全体コンテナ */
+        .tv-container {
             position: relative;
-            background: #1a1a1a;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8);
-            overflow: hidden;
+            width: 100vw;
+            height: 80vh;
+            max-width: 900px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
+        }
+
+        /* テレビ枠画像 */
+        .tv-bg {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            pointer-events: none;
+        }
+
+        /* CRT緑画面（テレビ画面内に精密配置） */
+        .tv-screen {
+            position: absolute;
+            background: #05140b;
+            overflow: hidden;
+            border-radius: 12px;
+            z-index: 2;
+            box-shadow: inset 0 0 30px rgba(0, 255, 170, 0.25);
+            border: 2px solid #004d33;
         }
 
         canvas {
@@ -43,32 +63,108 @@
             height: 100%;
             display: block;
             touch-action: none;
+            filter: drop-shadow(0 0 4px #00ffcc);
+        }
+
+        /* ブラウン管スキャンライン（走査線） */
+        .scanlines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%, 
+                rgba(0, 0, 0, 0.35) 50%
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 3;
         }
 
         .instructions {
-            margin-top: 15px;
+            margin-top: 12px;
             font-size: 14px;
-            color: #888;
+            color: #00b386;
             text-align: center;
             padding: 0 10px;
+            text-shadow: 0 0 5px rgba(0, 255, 204, 0.5);
         }
     </style>
 </head>
 <body>
 
-    <div class="game-wrapper" id="gameWrapper">
-        <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <div class="tv-container" id="tvContainer">
+        <!-- テレビの枠画像 -->
+        <img src="TV.jpg" alt="TV Frame" class="tv-bg" id="tvImg">
+
+        <!-- テレビ画面内部（ゲーム領域） -->
+        <div class="tv-screen" id="tvScreen">
+            <div class="scanlines"></div>
+            <canvas id="gameCanvas" width="800" height="400"></canvas>
+        </div>
     </div>
 
     <div class="instructions">
-        画面をタップ または スペースキーでジャンプ（2段ジャンプ可）
+        画面タップ または スペースキーでジャンプ（2段ジャンプ可）
     </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const gameWrapper = document.getElementById('gameWrapper');
+        const tvImg = document.getElementById('tvImg');
+        const tvScreen = document.getElementById('tvScreen');
+        const tvContainer = document.getElementById('tvContainer');
 
+        // TV画像の描画領域に合わせてCanvas画面をテレビ内部にジャストフィットさせる
+        function fitScreenToTV() {
+            if (!tvImg.complete || tvImg.naturalWidth === 0) {
+                // TV画像がない場合は画面中央に独立配置
+                tvScreen.style.left = '50%';
+                tvScreen.style.top = '50%';
+                tvScreen.style.transform = 'translate(-50%, -50%)';
+                tvScreen.style.width = '85vw';
+                tvScreen.style.maxWidth = '750px';
+                tvScreen.style.aspectRatio = '2 / 1';
+                return;
+            }
+
+            const containerRect = tvContainer.getBoundingClientRect();
+            const imgRatio = tvImg.naturalWidth / tvImg.naturalHeight;
+            const containerRatio = containerRect.width / containerRect.height;
+
+            let renderWidth, renderHeight, offsetX, offsetY;
+
+            if (containerRatio > imgRatio) {
+                renderHeight = containerRect.height;
+                renderWidth = renderHeight * imgRatio;
+                offsetX = (containerRect.width - renderWidth) / 2;
+                offsetY = 0;
+            } else {
+                renderWidth = containerRect.width;
+                renderHeight = renderWidth / imgRatio;
+                offsetX = 0;
+                offsetY = (containerRect.height - renderHeight) / 2;
+            }
+
+            // TV.jpg 内の緑色ディスプレイの位置比率設定
+            tvScreen.style.left = (offsetX + renderWidth * 0.158) + 'px';
+            tvScreen.style.top = (offsetY + renderHeight * 0.135) + 'px';
+            tvScreen.style.width = (renderWidth * 0.684) + 'px';
+            tvScreen.style.height = (renderHeight * 0.545) + 'px';
+            tvScreen.style.transform = 'none';
+        }
+
+        window.addEventListener('resize', fitScreenToTV);
+        tvImg.addEventListener('load', fitScreenToTV);
+        tvImg.onerror = () => {
+            // 画像エラー時は大文字拡張子を試す
+            tvImg.src = 'TV.JPG';
+            fitScreenToTV();
+        };
+        setTimeout(fitScreenToTV, 150);
+
+        // 物理・ゲーム変数設定
         const player = {
             x: 100,
             y: 250,
@@ -82,7 +178,6 @@
         };
 
         const groundLevel = 250;
-
         let obstacles = [];
         let gameSpeed = 5;
         let score = 0;
@@ -90,10 +185,13 @@
         let isGameOver = false;
         let nextObstacleTimer = 0;
 
-        // --- 画像の読み込み（フォールバック付きで確実に描画できるように修正） ---
+        // アセット読み込み（TTK_2.PNG, IMG_4627.PNG, IMG_4630.PNG）
         const charImage = new Image();
         let imageLoaded = false;
-        charImage.onload = () => { imageLoaded = true; };
+        charImage.onload = () => {
+            imageLoaded = true;
+            player.width = player.height * (charImage.naturalWidth / charImage.naturalHeight);
+        };
         charImage.src = 'TTK_2.PNG';
 
         const flowerImage = new Image();
@@ -106,9 +204,11 @@
         birdImage.onload = () => { birdLoaded = true; };
         birdImage.src = 'IMG_4630.PNG';
 
-        // ジャンプ・ゲーム開始の共通アクション
         function triggerAction(e) {
-            if (e) e.preventDefault();
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
 
             if (!isStarted || isGameOver) {
                 resetGame();
@@ -125,7 +225,7 @@
             }
         }
 
-        // スペースキー操作
+        // キーボード操作
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
                 e.preventDefault();
@@ -134,7 +234,7 @@
         });
 
         // タップ/クリック操作
-        gameWrapper.addEventListener('pointerdown', (e) => {
+        tvContainer.addEventListener('pointerdown', (e) => {
             triggerAction(e);
         });
 
@@ -247,50 +347,53 @@
 
             // プレイ中の描画
             if (isStarted && !isGameOver) {
-                // 地面
-                ctx.strokeStyle = '#555';
-                ctx.lineWidth = 4;
+                // 地面（レトログリーンライン）
+                ctx.strokeStyle = '#00ffcc';
+                ctx.shadowColor = '#00ffcc';
+                ctx.shadowBlur = 8;
+                ctx.lineWidth = 3;
                 ctx.beginPath();
                 ctx.moveTo(0, 300);
                 ctx.lineTo(canvas.width, 300);
                 ctx.stroke();
+                ctx.shadowBlur = 0;
 
-                // プレイヤー描画（画像未読込時はピンクの四角で確実に表示）
+                // プレイヤー描画（TTK_2.PNG）
                 if (imageLoaded && charImage.complete && charImage.naturalWidth > 0) {
                     ctx.drawImage(charImage, player.x, player.y, player.width, player.height);
                 } else {
-                    ctx.fillStyle = '#ff80bf';
+                    ctx.fillStyle = '#00ffcc';
                     ctx.fillRect(player.x, player.y, player.width, player.height);
                 }
 
-                // 障害物描画
+                // 障害物描画（花 & 鳥）
                 for (let obs of obstacles) {
                     if (obs.type === 'ground') {
                         if (flowerLoaded && flowerImage.complete && flowerImage.naturalWidth > 0) {
                             ctx.drawImage(flowerImage, obs.x, obs.y, obs.width, obs.height);
                         } else {
-                            ctx.fillStyle = '#e74c3c';
+                            ctx.fillStyle = '#ff3366';
                             ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
                         }
                     } else if (obs.type.startsWith('bird')) {
                         if (birdLoaded && birdImage.complete && birdImage.naturalWidth > 0) {
                             ctx.drawImage(birdImage, obs.x, obs.y, obs.width, obs.height);
                         } else {
-                            ctx.fillStyle = '#9b59b6';
+                            ctx.fillStyle = '#33ccff';
                             ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
                         }
                     }
                 }
 
-                // スコア
-                ctx.fillStyle = '#fff';
-                ctx.font = '20px sans-serif';
-                ctx.fillText(`SCORE: ${score}`, 20, 30);
+                // スコア表示
+                ctx.fillStyle = '#00ffcc';
+                ctx.font = '20px "Courier New", monospace';
+                ctx.fillText(`SCORE: ${score}`, 20, 35);
             }
 
-            // タイトル画面（TTK_2.PNGを表示）
+            // タイトル画面（緑がかったCRT風タイトル＋TTK_2.PNG）
             if (!isStarted) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+                ctx.fillStyle = 'rgba(5, 20, 11, 0.88)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
                 if (imageLoaded && charImage.complete && charImage.naturalWidth > 0) {
@@ -299,32 +402,39 @@
                     const imgX = (canvas.width - titleImgWidth) / 2;
                     const imgY = canvas.height / 2 - 95;
                     ctx.drawImage(charImage, imgX, imgY, titleImgWidth, titleImgHeight);
-                } else {
-                    ctx.fillStyle = '#ff80bf';
-                    ctx.fillRect(canvas.width / 2 - 30, canvas.height / 2 - 95, 60, 60);
                 }
 
-                ctx.fillStyle = '#fff';
-                ctx.font = 'bold 28px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('JUMP GAME', canvas.width / 2, canvas.height / 2 + 55);
-
-                ctx.font = '18px sans-serif';
                 ctx.fillStyle = '#00ffcc';
-                ctx.fillText('画面をタップしてスタート', canvas.width / 2, canvas.height / 2 + 95);
+                ctx.shadowColor = '#00ffcc';
+                ctx.shadowBlur = 10;
+                ctx.font = 'bold 28px "Courier New", monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('RETRO JUMP GAME', canvas.width / 2, canvas.height / 2 + 55);
+
+                ctx.font = '18px "Courier New", monospace';
+                ctx.fillText('PRESS TO START', canvas.width / 2, canvas.height / 2 + 95);
+                ctx.shadowBlur = 0;
                 ctx.textAlign = 'left';
             }
 
             // ゲームオーバー画面
             if (isGameOver) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+                ctx.fillStyle = 'rgba(5, 10, 5, 0.85)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#fff';
-                ctx.font = '32px sans-serif';
+                
+                ctx.fillStyle = '#ff3366';
+                ctx.shadowColor = '#ff3366';
+                ctx.shadowBlur = 12;
+                ctx.font = 'bold 32px "Courier New", monospace';
                 ctx.textAlign = 'center';
                 ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 20);
-                ctx.font = '16px sans-serif';
-                ctx.fillText('画面をタップしてリトライ', canvas.width / 2, canvas.height / 2 + 25);
+
+                ctx.fillStyle = '#00ffcc';
+                ctx.shadowColor = '#00ffcc';
+                ctx.shadowBlur = 8;
+                ctx.font = '16px "Courier New", monospace';
+                ctx.fillText('TAP TO RETRY', canvas.width / 2, canvas.height / 2 + 25);
+                ctx.shadowBlur = 0;
                 ctx.textAlign = 'left';
             }
         }
