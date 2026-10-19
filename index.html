@@ -14,7 +14,7 @@
             padding: 0;
         }
         body {
-            background: #000;
+            background: #111;
             color: #fff;
             display: flex;
             flex-direction: column;
@@ -27,25 +27,29 @@
         }
 
         /* テレビ全体を収めるコンテナ */
-        .tv-wrapper {
+        .tv-container {
             position: relative;
-            width: 95vw;
-            max-width: 850px;
+            width: 100vw;
+            max-width: 800px;
             aspect-ratio: 16 / 9;
+            background-color: #222;
         }
 
-        /* テレビの枠画像 (TV.jpg) を一番下に配置してベースにする */
-        .tv-frame {
+        /* テレビの枠画像 */
+        .tv-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            display: block;
             object-fit: contain;
+            pointer-events: none;
+            z-index: 1;
         }
 
-        /* テレビの画面（緑の部分）の正確な位置にゲームをハメ込むコンテナ */
-        .tv-screen-area {
+        /* テレビの画面（緑の部分）にハメ込むゲーム領域 */
+        .tv-screen {
             position: absolute;
-            /* ※もし位置がズレる場合はここの % を微調整してください */
             top: 13%;
             left: 22%;
             width: 58%;
@@ -53,6 +57,7 @@
             background: #112211;
             overflow: hidden;
             border-radius: 15px / 12px;
+            z-index: 2;
         }
 
         canvas {
@@ -60,10 +65,9 @@
             height: 100%;
             display: block;
             cursor: pointer;
-            touch-action: none;
         }
 
-        /* ブラウン管風のスキャンライン */
+        /* スキャンライン */
         .scanlines {
             position: absolute;
             top: 0;
@@ -76,13 +80,13 @@
             );
             background-size: 100% 4px;
             pointer-events: none;
-            z-index: 10;
+            z-index: 3;
         }
 
         .instructions {
             margin-top: 15px;
             font-size: 14px;
-            color: #888;
+            color: #aaa;
             text-align: center;
             padding: 0 10px;
         }
@@ -90,12 +94,12 @@
 </head>
 <body>
 
-    <div class="tv-wrapper">
-        <!-- 1. ベースとなるテレビの枠画像 (TV.jpg) -->
-        <img src="TV.jpg" alt="TV Frame" class="tv-frame" id="tvImage">
+    <div class="tv-container">
+        <!-- 背景のテレビ枠 (TV.jpg) -->
+        <img src="TV.jpg" alt="TV Frame" class="tv-bg" id="tvImg">
 
-        <!-- 2. テレビ画面の内側に埋め込むゲーム領域 -->
-        <div class="tv-screen-area">
+        <!-- ゲーム画面（緑の部分） -->
+        <div class="tv-screen">
             <div class="scanlines"></div>
             <canvas id="gameCanvas" width="800" height="400"></canvas>
         </div>
@@ -130,17 +134,15 @@
         let isGameOver = false;
         let nextObstacleTimer = 0;
 
-        // プレイヤー画像の設定（TTK_2.PNG）
+        // 画像の読み込み
         const charImage = new Image();
         let imageLoaded = false;
         charImage.onload = () => {
             imageLoaded = true;
-            const aspectRatio = charImage.naturalWidth / charImage.naturalHeight;
-            player.width = player.height * aspectRatio;
+            player.width = player.height * (charImage.naturalWidth / charImage.naturalHeight);
         };
         charImage.src = 'TTK_2.PNG';
 
-        // 地面の障害物（お花：IMG_4627.PNG）の設定
         const flowerImage = new Image();
         let flowerLoaded = false;
         let flowerAspectRatio = 1;
@@ -150,7 +152,6 @@
         };
         flowerImage.src = 'IMG_4627.PNG';
 
-        // 上空の障害物（鳥：IMG_4630.PNG）の設定
         const birdImage = new Image();
         let birdLoaded = false;
         let birdAspectRatio = 1.3;
@@ -159,6 +160,13 @@
             birdAspectRatio = birdImage.naturalWidth / birdImage.naturalHeight;
         };
         birdImage.src = 'IMG_4630.PNG';
+
+        // テレビ画像の読み込みエラー対策（大文字小文字の違いなど）
+        const tvImg = document.getElementById('tvImg');
+        tvImg.onerror = () => {
+            // TV.jpgが見つからない場合は大文字のTV.JPGを試す、あるいは非表示にしてゲームを見やすくする
+            tvImg.src = 'TV.JPG';
+        };
 
         function triggerAction(e) {
             if (e) e.preventDefault();
@@ -178,7 +186,7 @@
             }
         }
 
-        // キーボード操作（スペースキー）
+        // 操作イベント
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
                 e.preventDefault();
@@ -186,7 +194,6 @@
             }
         });
 
-        // タップ/クリック操作
         canvas.addEventListener('pointerdown', (e) => {
             triggerAction(e);
         });
@@ -298,7 +305,7 @@
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 地面描画
+            // 地面
             ctx.strokeStyle = '#555';
             ctx.lineWidth = 4;
             ctx.beginPath();
@@ -306,7 +313,7 @@
             ctx.lineTo(canvas.width, 300);
             ctx.stroke();
 
-            // プレイヤー描画
+            // プレイヤー
             if (imageLoaded) {
                 ctx.drawImage(charImage, player.x, player.y, player.width, player.height);
             } else {
@@ -314,7 +321,7 @@
                 ctx.fillRect(player.x, player.y, player.width, player.height);
             }
 
-            // 障害物描画
+            // 障害物
             for (let obs of obstacles) {
                 if (obs.type === 'ground') {
                     if (flowerLoaded) {
@@ -333,7 +340,7 @@
                 }
             }
 
-            // スコア表示
+            // スコア
             ctx.fillStyle = '#fff';
             ctx.font = '20px sans-serif';
             ctx.fillText(`SCORE: ${score}`, 20, 30);
