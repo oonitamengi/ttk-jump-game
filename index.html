@@ -13,7 +13,7 @@
         }
         body {
             margin: 0;
-            padding: 10px;
+            padding: 0;
             background: #222;
             color: #fff;
             display: flex;
@@ -26,13 +26,11 @@
             touch-action: none;
         }
         .game-container {
-            width: 100%;
-            max-width: 800px;
+            width: 100vw;
             aspect-ratio: 2 / 1;
             position: relative;
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
             background: #333;
-            border-radius: 8px;
             overflow: hidden;
         }
         canvas {
@@ -57,7 +55,7 @@
         <canvas id="gameCanvas" width="800" height="400"></canvas>
     </div>
     <div class="instructions">
-        [Space]キー または 画面タップでジャンプ（空中で2段ジャンプ可）<br>スタートします
+        画面タップ または スペースキーでジャンプ（空中で2段ジャンプ可）<br>スタートします
     </div>
 
     <script>
@@ -85,6 +83,7 @@
         let isGameOver = false;
         let nextObstacleTimer = 0;
 
+        // プレイヤー画像
         const charImage = new Image();
         let imageLoaded = false;
         charImage.onload = () => { imageLoaded = true; };
@@ -93,6 +92,15 @@
             else if (charImage.src.endsWith('TTK_2.png')) charImage.src = 'TTK_2.jpg';
         };
         charImage.src = 'TTK_2.PNG';
+
+        // 地面の障害物（お花）の画像
+        const flowerImage = new Image();
+        let flowerLoaded = false;
+        flowerImage.onload = () => { flowerLoaded = true; };
+        flowerImage.onerror = () => {
+            if (flowerImage.src.endsWith('IMG_4627.jpg')) flowerImage.src = 'IMG_4627.JPG';
+        };
+        flowerImage.src = 'IMG_4627.jpg';
 
         function triggerAction(e) {
             if (e) {
@@ -121,7 +129,6 @@
             }
         });
 
-        // スマホのタップやPCのクリックに両対応
         canvas.addEventListener('touchstart', (e) => {
             triggerAction(e);
         }, { passive: false });
@@ -151,13 +158,13 @@
             let newObstacle;
 
             if (rand < 0.45) {
+                // 地面の障害物（お花画像を使用）
                 newObstacle = {
                     type: 'ground',
                     x: canvas.width,
-                    y: 260,
-                    width: 30,
-                    height: 40,
-                    color: '#e74c3c'
+                    y: 235, // 地面(y=300)の上にぴったり乗るように調整
+                    width: 42,
+                    height: 65
                 };
             } else if (rand < 0.75) {
                 newObstacle = {
@@ -221,87 +228,4 @@
                     if (
                         player.x + padding < obs.x + obs.width - padding &&
                         player.x + player.width - padding > obs.x + padding &&
-                        player.y + padding < obs.y + obs.height - padding &&
-                        player.y + player.height - padding > obs.y + padding
-                    ) {
-                        isGameOver = true;
-                    }
-
-                    if (obs.x + obs.width < 0) {
-                        obstacles.splice(i, 1);
-                    }
-                }
-
-                gameSpeed = 5 + Math.floor(score / 350);
-            }
-        }
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // 背景の地面線
-            ctx.strokeStyle = '#555';
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.moveTo(0, 300);
-            ctx.lineTo(canvas.width, 300);
-            ctx.stroke();
-
-            // プレイヤー描画
-            if (imageLoaded) {
-                ctx.drawImage(charImage, player.x, player.y, player.width, player.height);
-            } else {
-                ctx.fillStyle = '#ff80bf';
-                ctx.fillRect(player.x, player.y, player.width, player.height);
-            }
-
-            // 障害物描画
-            for (let obs of obstacles) {
-                ctx.fillStyle = obs.color;
-                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-                
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 1;
-                ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
-            }
-
-            // スコア表示
-            ctx.fillStyle = '#fff';
-            ctx.font = '20px sans-serif';
-            ctx.fillText(`SCORE: ${score}`, 20, 30);
-
-            // スタート前画面
-            if (!isStarted) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#fff';
-                ctx.font = '26px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('画面タップ または スペースキーでスタート', canvas.width / 2, canvas.height / 2);
-                ctx.textAlign = 'left';
-            }
-
-            // ゲームオーバー画面
-            if (isGameOver) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#fff';
-                ctx.font = '30px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 15);
-                ctx.font = '16px sans-serif';
-                ctx.fillText('画面タップ または スペースキーでリトライ', canvas.width / 2, canvas.height / 2 + 25);
-                ctx.textAlign = 'left';
-            }
-        }
-
-        function loop() {
-            update();
-            draw();
-            requestAnimationFrame(loop);
-        }
-
-        loop();
-    </script>
-</body>
-</html>
+                        player.y + padding
