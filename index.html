@@ -26,31 +26,18 @@
             touch-action: manipulation;
         }
 
-        /* テレビ全体を収めるコンテナ（スマホ対応のレスポンシブ設計） */
+        /* テレビ全体を収めるコンテナ */
         .tv-wrapper {
             position: relative;
-            width: 100vw;
+            width: 95vw;
             max-width: 850px;
             aspect-ratio: 16 / 9;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 10px;
         }
 
-        /* 背景のテレビ画像 (TV.jpg)[cite: 2] */
-        .tv-frame {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            pointer-events: none;
-            z-index: 3;
-        }
-
-        /* テレビの画面（緑の部分）にハメ込む領域 */
+        /* テレビ画面（緑の部分）の配置エリア */
         .tv-screen-area {
             position: absolute;
             top: 13%;
@@ -59,17 +46,30 @@
             height: 72%;
             background: #112211;
             overflow: hidden;
-            border-radius: 20px / 15px; /* ブラウン管風の角丸カーブ */
-            z-index: 2;
+            border-radius: 20px / 15px;
+            z-index: 10; /* ゲーム画面を前面にしてタッチを確実に受け付ける */
         }
 
         canvas {
             width: 100%;
             height: 100%;
             display: block;
+            cursor: pointer;
         }
 
-        /* ブラウン管風のスキャンライン（横シマ）演出 */
+        /* テレビの枠画像 (TV.jpg)[cite: 2] - タップを邪魔しないよう pointer-events: none を設定 */
+        .tv-frame {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        /* ブラウン管風のスキャンライン */
         .scanlines {
             position: absolute;
             top: 0;
@@ -81,7 +81,7 @@
                 rgba(0, 0, 0, 0.25) 50%
             );
             background-size: 100% 4px;
-            z-index: 4;
+            z-index: 15;
             pointer-events: none;
         }
 
@@ -91,22 +91,21 @@
             color: #888;
             text-align: center;
             padding: 0 10px;
-            pointer-events: none;
-            z-index: 5;
+            z-index: 25;
         }
     </style>
 </head>
 <body>
 
     <div class="tv-wrapper">
-        <!-- テレビの枠画像 (TV.jpg)[cite: 2] -->
-        <img src="TV.jpg" alt="TV Frame" class="tv-frame" id="tvImage">
-
-        <!-- テレビ画面の内側 -->
+        <!-- ゲーム画面（テレビの内側） -->
         <div class="tv-screen-area">
             <div class="scanlines"></div>
             <canvas id="gameCanvas" width="800" height="400"></canvas>
         </div>
+
+        <!-- テレビの枠画像 (TV.jpg)[cite: 2] -->
+        <img src="TV.jpg" alt="TV Frame" class="tv-frame" id="tvImage">
     </div>
 
     <div class="instructions">
@@ -171,7 +170,9 @@
         birdImage.onerror = () => { birdLoaded = false; };
         birdImage.src = 'IMG_4630.PNG';
 
-        function triggerAction() {
+        function triggerAction(e) {
+            if (e) e.preventDefault();
+
             if (!isStarted || isGameOver) {
                 resetGame();
                 return;
@@ -187,7 +188,7 @@
             }
         }
 
-        // キーボード操作
+        // キーボード操作（スペースキー）
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
                 e.preventDefault();
@@ -195,17 +196,13 @@
             }
         });
 
-        // スマホのタップ操作（誤作動防止対応）
-        let touchHandled = false;
-        window.addEventListener('touchstart', (e) => {
-            touchHandled = true;
-            triggerAction();
-            setTimeout(() => { touchHandled = false; }, 300);
-        }, { passive: true });
+        // スマホ・PCのタップ/クリック操作を確実にキャンバスに紐付け
+        canvas.addEventListener('touchstart', (e) => {
+            triggerAction(e);
+        }, { passive: false });
 
-        window.addEventListener('mousedown', (e) => {
-            if (touchHandled) return;
-            triggerAction();
+        canvas.addEventListener('click', (e) => {
+            triggerAction(e);
         });
 
         function resetGame() {
@@ -360,9 +357,9 @@
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.fillStyle = '#fff';
-                ctx.font = '24px sans-serif';
+                ctx.font = '22px sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText('画面タップでスタート', canvas.width / 2, canvas.height / 2);
+                ctx.fillText('画面をタップしてスタート', canvas.width / 2, canvas.height / 2);
                 ctx.textAlign = 'left';
             }
 
@@ -371,11 +368,11 @@
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.fillStyle = '#fff';
-                ctx.font = '30px sans-serif';
+                ctx.font = '28px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 15);
                 ctx.font = '16px sans-serif';
-                ctx.fillText('画面タップでリトライ', canvas.width / 2, canvas.height / 2 + 25);
+                ctx.fillText('画面をタップしてリトライ', canvas.width / 2, canvas.height / 2 + 25);
                 ctx.textAlign = 'left';
             }
         }
