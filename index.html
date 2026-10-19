@@ -47,7 +47,7 @@
             background: #112211;
             overflow: hidden;
             border-radius: 20px / 15px;
-            z-index: 10; /* ゲーム画面を前面にしてタッチを確実に受け付ける */
+            z-index: 10;
         }
 
         canvas {
@@ -55,9 +55,10 @@
             height: 100%;
             display: block;
             cursor: pointer;
+            touch-action: none;
         }
 
-        /* テレビの枠画像 (TV.jpg)[cite: 2] - タップを邪魔しないよう pointer-events: none を設定 */
+        /* テレビの枠画像 (TV.jpg)[cite: 2] */
         .tv-frame {
             position: absolute;
             top: 0;
@@ -109,7 +110,7 @@
     </div>
 
     <div class="instructions">
-        画面タップ または スペースキーでジャンプ（2段ジャンプ可）
+        画面をタップ または スペースキーでジャンプ（2段ジャンプ可）
     </div>
 
     <script>
@@ -170,9 +171,7 @@
         birdImage.onerror = () => { birdLoaded = false; };
         birdImage.src = 'IMG_4630.PNG';
 
-        function triggerAction(e) {
-            if (e) e.preventDefault();
-
+        function triggerAction() {
             if (!isStarted || isGameOver) {
                 resetGame();
                 return;
@@ -196,13 +195,10 @@
             }
         });
 
-        // スマホ・PCのタップ/クリック操作を確実にキャンバスに紐付け
-        canvas.addEventListener('touchstart', (e) => {
-            triggerAction(e);
-        }, { passive: false });
-
-        canvas.addEventListener('click', (e) => {
-            triggerAction(e);
+        // pointerdown を使うことでスマホのタップとPCのクリックを綺麗に両立
+        canvas.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            triggerAction();
         });
 
         function resetGame() {
