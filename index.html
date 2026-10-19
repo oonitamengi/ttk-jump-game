@@ -26,18 +26,19 @@
             touch-action: manipulation;
         }
 
-        /* テレビ全体を収めるコンテナ */
+        /* テレビ全体を収めるコンテナ（スマホ対応のレスポンシブ設計） */
         .tv-wrapper {
             position: relative;
-            width: 90vw;
+            width: 100vw;
             max-width: 850px;
             aspect-ratio: 16 / 9;
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 10px;
         }
 
-        /* 背景のテレビ画像 (TV.jpg) */
+        /* 背景のテレビ画像 (TV.jpg)[cite: 2] */
         .tv-frame {
             position: absolute;
             top: 0;
@@ -58,7 +59,7 @@
             height: 72%;
             background: #112211;
             overflow: hidden;
-            border-radius: 20px / 15px; /* ブラウン管風の角丸 */
+            border-radius: 20px / 15px; /* ブラウン管風の角丸カーブ */
             z-index: 2;
         }
 
@@ -98,7 +99,7 @@
 <body>
 
     <div class="tv-wrapper">
-        <!-- テレビの枠画像 (TV.jpg) -->
+        <!-- テレビの枠画像 (TV.jpg)[cite: 2] -->
         <img src="TV.jpg" alt="TV Frame" class="tv-frame" id="tvImage">
 
         <!-- テレビ画面の内側 -->
@@ -194,7 +195,7 @@
             }
         });
 
-        // スマホのタップ操作
+        // スマホのタップ操作（誤作動防止対応）
         let touchHandled = false;
         window.addEventListener('touchstart', (e) => {
             touchHandled = true;
