@@ -218,7 +218,7 @@
                     y: getRandomInt(120, 220),
                     width: bWidth,
                     height: bHeight,
-                    speedMultiplier: 1.2
+                    accelPhase: 'normal'
                 });
             } else if (highDiff && rand < 0.70) {
                 // 下から生えてくる花 (IMG_4627.PNG)
@@ -231,7 +231,7 @@
                     width: targetW,
                     height: 15,
                     targetHeight: targetH,
-                    growSpeed: 1.8
+                    growSpeed: 2.2
                 });
             } else if (rand < 0.85) {
                 // 通常の地面の花 (IMG_4627.PNG)
@@ -285,10 +285,11 @@
                         obs.angle += 0.08;
                         obs.y = obs.baseY + Math.sin(obs.angle) * 45;
                     } else if (obs.type === 'accel_bird') {
-                        if (obs.x < 500 && obs.x > 320) {
-                            currentSpeed *= 0.3;
+                        // 画面の中央付近で減速→その後一気に加速して突進
+                        if (obs.x < 520 && obs.x > 320) {
+                            currentSpeed *= 0.25; // タメ（超減速）
                         } else if (obs.x <= 320) {
-                            currentSpeed *= 2.2;
+                            currentSpeed *= 2.4;  // 急加速（突進）
                         }
                     } else if (obs.type === 'growing_flower') {
                         if (obs.height < obs.targetHeight) {
