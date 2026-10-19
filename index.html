@@ -13,32 +13,22 @@
             margin: 0;
             padding: 0;
         }
-        html, body {
-            width: 100%;
-            height: 100%;
+        body {
             background: #111;
             color: #fff;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            min-height: 100vh;
             font-family: sans-serif;
             overflow: hidden;
             touch-action: manipulation;
         }
-        .game-wrapper {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 0;
-        }
         .game-container {
-            width: 100vw;
-            height: 50vw;
-            max-height: 100vh;
+            width: 100%;
+            max-width: 800px;
+            aspect-ratio: 2 / 1;
             position: relative;
             box-shadow: 0 4px 20px rgba(0,0,0,0.8);
             background: #333;
@@ -50,23 +40,22 @@
             display: block;
         }
         .instructions {
-            margin-top: 10px;
-            font-size: 13px;
+            margin-top: 12px;
+            font-size: 14px;
             color: #aaa;
             text-align: center;
+            padding: 0 10px;
             pointer-events: none;
         }
     </style>
 </head>
 <body>
 
-    <div class="game-wrapper">
-        <div class="game-container">
-            <canvas id="gameCanvas" width="800" height="400"></canvas>
-        </div>
-        <div class="instructions">
-            画面タップ / [Space] でジャンプ（2段ジャンプ可）
-        </div>
+    <div class="game-container">
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+    </div>
+    <div class="instructions">
+        画面タップ または スペースキーでジャンプ（2段ジャンプ可）
     </div>
 
     <script>
@@ -76,8 +65,8 @@
         const player = {
             x: 100,
             y: 250,
-            width: 50,
             height: 50,
+            width: 50,
             vy: 0,
             gravity: 0.75,
             jumpPower: -12.5,
@@ -94,19 +83,26 @@
         let isGameOver = false;
         let nextObstacleTimer = 0;
 
-        // プレイヤー画像の設定
+        // プレイヤー画像の設定（縦横比自動計算）
         const charImage = new Image();
         let imageLoaded = false;
-        charImage.onload = () => { imageLoaded = true; };
+        charImage.onload = () => {
+            imageLoaded = true;
+            const aspectRatio = charImage.naturalWidth / charImage.naturalHeight;
+            player.width = player.height * aspectRatio;
+        };
         charImage.onerror = () => { imageLoaded = false; };
         charImage.src = 'TTK_2.PNG';
 
-        // 地面の障害物（IMG_4627.PNG）の確実な指定
+        // 地面の障害物（お花：IMG_4627.PNG）の設定（縦横比自動計算）
         const flowerImage = new Image();
         let flowerLoaded = false;
-        flowerImage.onload = () => { flowerLoaded = true; };
+        let flowerAspectRatio = 1; // 予備の比率
+        flowerImage.onload = () => {
+            flowerLoaded = true;
+            flowerAspectRatio = flowerImage.naturalWidth / flowerImage.naturalHeight;
+        };
         flowerImage.onerror = () => {
-            // 万が一読み込めなかった場合の予備（小文字なども自動トライ）
             flowerImage.src = 'IMG_4627.png';
         };
         flowerImage.src = 'IMG_4627.PNG';
@@ -170,12 +166,15 @@
 
             if (rand < 0.45) {
                 // 地面の障害物（お花：IMG_4627.PNG）
+                // 高さを65に固定し、比率に合わせて幅を自動で決定します
+                const fHeight = 65;
+                const fWidth = fHeight * flowerAspectRatio;
                 newObstacle = {
                     type: 'ground',
                     x: canvas.width,
-                    y: 225, // 地面(y=300)の上にぴったり乗る高さ
-                    width: 50,
-                    height: 75
+                    y: 300 - fHeight, // 地面(y=300)の上にぴったり配置
+                    width: fWidth,
+                    height: fHeight
                 };
             } else if (rand < 0.75) {
                 // 低空障害物
@@ -274,9 +273,9 @@
             for (let obs of obstacles) {
                 if (obs.type === 'ground') {
                     if (flowerLoaded) {
+                        // 動的に計算した正しいアスペクト比の幅・高さで描画
                         ctx.drawImage(flowerImage, obs.x, obs.y, obs.width, obs.height);
                     } else {
-                        // 万が一画像が読み込まれていない場合のフォールバック（赤箱）
                         ctx.fillStyle = '#e74c3c';
                         ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
                     }
