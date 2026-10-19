@@ -90,34 +90,20 @@
         let isGameOver = false;
         let nextObstacleTimer = 0;
 
-        // プレイヤー画像（TTK_2.PNG）の読み込み
+        // --- 画像の読み込み（フォールバック付きで確実に描画できるように修正） ---
         const charImage = new Image();
         let imageLoaded = false;
-        charImage.onload = () => {
-            imageLoaded = true;
-            const aspectRatio = charImage.naturalWidth / charImage.naturalHeight;
-            player.width = player.height * aspectRatio;
-        };
+        charImage.onload = () => { imageLoaded = true; };
         charImage.src = 'TTK_2.PNG';
 
-        // 地面の障害物（IMG_4627.PNG）の読み込み
         const flowerImage = new Image();
         let flowerLoaded = false;
-        let flowerAspectRatio = 1;
-        flowerImage.onload = () => {
-            flowerLoaded = true;
-            flowerAspectRatio = flowerImage.naturalWidth / flowerImage.naturalHeight;
-        };
+        flowerImage.onload = () => { flowerLoaded = true; };
         flowerImage.src = 'IMG_4627.PNG';
 
-        // 上空の障害物（IMG_4630.PNG）の読み込み
         const birdImage = new Image();
         let birdLoaded = false;
-        let birdAspectRatio = 1.3;
-        birdImage.onload = () => {
-            birdLoaded = true;
-            birdAspectRatio = birdImage.naturalWidth / birdImage.naturalHeight;
-        };
+        birdImage.onload = () => { birdLoaded = true; };
         birdImage.src = 'IMG_4630.PNG';
 
         // ジャンプ・ゲーム開始の共通アクション
@@ -174,7 +160,7 @@
 
             if (rand < 0.45) {
                 const fHeight = 65;
-                const fWidth = fHeight * flowerAspectRatio;
+                const fWidth = 50;
                 newObstacle = {
                     type: 'ground',
                     x: canvas.width,
@@ -184,7 +170,7 @@
                 };
             } else if (rand < 0.75) {
                 const bHeight = 45;
-                const bWidth = bHeight * birdAspectRatio;
+                const bWidth = 60;
                 newObstacle = {
                     type: 'bird_low',
                     x: canvas.width,
@@ -195,7 +181,7 @@
                 };
             } else {
                 const bHeight = 45;
-                const bWidth = bHeight * birdAspectRatio;
+                const bWidth = 60;
                 newObstacle = {
                     type: 'bird_high',
                     x: canvas.width,
@@ -269,25 +255,25 @@
                 ctx.lineTo(canvas.width, 300);
                 ctx.stroke();
 
-                // プレイヤー
-                if (imageLoaded) {
+                // プレイヤー描画（画像未読込時はピンクの四角で確実に表示）
+                if (imageLoaded && charImage.complete && charImage.naturalWidth > 0) {
                     ctx.drawImage(charImage, player.x, player.y, player.width, player.height);
                 } else {
                     ctx.fillStyle = '#ff80bf';
                     ctx.fillRect(player.x, player.y, player.width, player.height);
                 }
 
-                // 障害物
+                // 障害物描画
                 for (let obs of obstacles) {
                     if (obs.type === 'ground') {
-                        if (flowerLoaded) {
+                        if (flowerLoaded && flowerImage.complete && flowerImage.naturalWidth > 0) {
                             ctx.drawImage(flowerImage, obs.x, obs.y, obs.width, obs.height);
                         } else {
                             ctx.fillStyle = '#e74c3c';
                             ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
                         }
                     } else if (obs.type.startsWith('bird')) {
-                        if (birdLoaded) {
+                        if (birdLoaded && birdImage.complete && birdImage.naturalWidth > 0) {
                             ctx.drawImage(birdImage, obs.x, obs.y, obs.width, obs.height);
                         } else {
                             ctx.fillStyle = '#9b59b6';
@@ -307,12 +293,15 @@
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                if (imageLoaded) {
+                if (imageLoaded && charImage.complete && charImage.naturalWidth > 0) {
                     const titleImgHeight = 120;
                     const titleImgWidth = titleImgHeight * (charImage.naturalWidth / charImage.naturalHeight);
                     const imgX = (canvas.width - titleImgWidth) / 2;
                     const imgY = canvas.height / 2 - 95;
                     ctx.drawImage(charImage, imgX, imgY, titleImgWidth, titleImgHeight);
+                } else {
+                    ctx.fillStyle = '#ff80bf';
+                    ctx.fillRect(canvas.width / 2 - 30, canvas.height / 2 - 95, 60, 60);
                 }
 
                 ctx.fillStyle = '#fff';
