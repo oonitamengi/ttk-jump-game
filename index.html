@@ -83,7 +83,7 @@
         let isGameOver = false;
         let nextObstacleTimer = 0;
 
-        // プレイヤー画像の設定（縦横比自動計算）
+        // プレイヤー画像の設定
         const charImage = new Image();
         let imageLoaded = false;
         charImage.onload = () => {
@@ -107,7 +107,7 @@
         };
         flowerImage.src = 'IMG_4627.PNG';
 
-        // 上空の障害物（鳥：IMG_4630.jpg）の設定[cite: 2]
+        // 上空の障害物（鳥：大文字のIMG_4630.JPGを最優先に指定）
         const birdImage = new Image();
         let birdLoaded = false;
         let birdAspectRatio = 1.3;
@@ -116,9 +116,10 @@
             birdAspectRatio = birdImage.naturalWidth / birdImage.naturalHeight;
         };
         birdImage.onerror = () => {
-            birdImage.src = 'IMG_4630.JPG';
+            // 読み込めなかった場合の小文字へのフォールバック
+            birdImage.src = 'IMG_4630.jpg';
         };
-        birdImage.src = 'IMG_4630.jpg';
+        birdImage.src = 'IMG_4630.JPG';
 
         function triggerAction() {
             if (!isStarted || isGameOver) {
