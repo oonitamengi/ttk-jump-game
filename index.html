@@ -14,7 +14,7 @@
             padding: 0;
         }
         body {
-            background: #111;
+            background: #000;
             color: #fff;
             display: flex;
             flex-direction: column;
@@ -29,10 +29,11 @@
         /* テレビ全体を収めるコンテナ */
         .tv-container {
             position: relative;
-            width: 100vw;
+            width: 95vw;
             max-width: 800px;
             aspect-ratio: 16 / 9;
-            background-color: #222;
+            background-color: #000;
+            cursor: pointer;
         }
 
         /* テレビの枠画像 */
@@ -47,16 +48,16 @@
             z-index: 1;
         }
 
-        /* テレビの画面（緑の部分）にハメ込むゲーム領域 */
+        /* テレビの緑画面に精密調整したハメ込み領域 */
         .tv-screen {
             position: absolute;
-            top: 13%;
-            left: 22%;
-            width: 58%;
-            height: 72%;
+            top: 13.5%;
+            left: 15.8%;
+            width: 68.4%;
+            height: 54.5%;
             background: #112211;
             overflow: hidden;
-            border-radius: 15px / 12px;
+            border-radius: 12px / 8px;
             z-index: 2;
         }
 
@@ -64,10 +65,9 @@
             width: 100%;
             height: 100%;
             display: block;
-            cursor: pointer;
         }
 
-        /* スキャンライン */
+        /* スキャンライン（走査線） */
         .scanlines {
             position: absolute;
             top: 0;
@@ -94,7 +94,7 @@
 </head>
 <body>
 
-    <div class="tv-container">
+    <div class="tv-container" id="tvContainer">
         <!-- 背景のテレビ枠 (TV.jpg) -->
         <img src="TV.jpg" alt="TV Frame" class="tv-bg" id="tvImg">
 
@@ -106,12 +106,13 @@
     </div>
 
     <div class="instructions">
-        画面をタップ または スペースキーでジャンプ（2段ジャンプ可）
+        画面全体をタップ または スペースキーでジャンプ（2段ジャンプ可）
     </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        const tvContainer = document.getElementById('tvContainer');
 
         const player = {
             x: 100,
@@ -161,222 +162,21 @@
         };
         birdImage.src = 'IMG_4630.PNG';
 
-        // テレビ画像の読み込みエラー対策（大文字小文字の違いなど）
+        // テレビ画像の拡張子対策
         const tvImg = document.getElementById('tvImg');
         tvImg.onerror = () => {
-            // TV.jpgが見つからない場合は大文字のTV.JPGを試す、あるいは非表示にしてゲームを見やすくする
             tvImg.src = 'TV.JPG';
         };
 
         function triggerAction(e) {
-            if (e) e.preventDefault();
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
 
             if (!isStarted || isGameOver) {
                 resetGame();
                 return;
             }
 
-            if (player.jumpCount < 2) {
-                if (player.jumpCount === 0) {
-                    player.vy = player.jumpPower;
-                } else {
-                    player.vy = player.doubleJumpPower;
-                }
-                player.jumpCount++;
-            }
-        }
-
-        // 操作イベント
-        window.addEventListener('keydown', (e) => {
-            if (e.code === 'Space') {
-                e.preventDefault();
-                triggerAction();
-            }
-        });
-
-        canvas.addEventListener('pointerdown', (e) => {
-            triggerAction(e);
-        });
-
-        function resetGame() {
-            obstacles = [];
-            score = 0;
-            gameSpeed = 5;
-            isGameOver = false;
-            isStarted = true;
-            player.y = groundLevel;
-            player.vy = 0;
-            player.jumpCount = 0;
-            nextObstacleTimer = 50;
-        }
-
-        function getRandomInt(min, max) {
-            return Math.floor(Math.random() * (max - min + 1)) + min;
-        }
-
-        function createObstacle() {
-            const rand = Math.random();
-            let newObstacle;
-
-            if (rand < 0.45) {
-                const fHeight = 65;
-                const fWidth = fHeight * flowerAspectRatio;
-                newObstacle = {
-                    type: 'ground',
-                    x: canvas.width,
-                    y: 300 - fHeight,
-                    width: fWidth,
-                    height: fHeight
-                };
-            } else if (rand < 0.75) {
-                const bHeight = 45;
-                const bWidth = bHeight * birdAspectRatio;
-                newObstacle = {
-                    type: 'bird_low',
-                    x: canvas.width,
-                    y: 200,
-                    width: bWidth,
-                    height: bHeight,
-                    speedMultiplier: 1.2
-                };
-            } else {
-                const bHeight = 45;
-                const bWidth = bHeight * birdAspectRatio;
-                newObstacle = {
-                    type: 'bird_high',
-                    x: canvas.width,
-                    y: 120,
-                    width: bWidth,
-                    height: bHeight,
-                    speedMultiplier: 1.4
-                };
-            }
-            obstacles.push(newObstacle);
-        }
-
-        function update() {
-            if (isStarted && !isGameOver) {
-                score++;
-
-                player.vy += player.gravity;
-                player.y += player.vy;
-
-                if (player.y >= groundLevel) {
-                    player.y = groundLevel;
-                    player.vy = 0;
-                    player.jumpCount = 0;
-                }
-
-                nextObstacleTimer--;
-                if (nextObstacleTimer <= 0) {
-                    createObstacle();
-                    const minInterval = Math.max(35, 75 - Math.floor(score / 300));
-                    const maxInterval = Math.max(70, 140 - Math.floor(score / 300));
-                    nextObstacleTimer = getRandomInt(minInterval, maxInterval);
-                }
-
-                for (let i = obstacles.length - 1; i >= 0; i--) {
-                    let obs = obstacles[i];
-                    let currentSpeed = gameSpeed;
-                    if (obs.type.startsWith('bird')) {
-                        currentSpeed *= obs.speedMultiplier;
-                    }
-                    obs.x -= currentSpeed;
-
-                    const padding = 6;
-                    if (
-                        player.x + padding < obs.x + obs.width - padding &&
-                        player.x + player.width - padding > obs.x + padding &&
-                        player.y + padding < obs.y + obs.height - padding &&
-                        player.y + player.height - padding > obs.y + padding
-                    ) {
-                        isGameOver = true;
-                    }
-
-                    if (obs.x + obs.width < 0) {
-                        obstacles.splice(i, 1);
-                    }
-                }
-
-                gameSpeed = 5 + Math.floor(score / 350);
-            }
-        }
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // 地面
-            ctx.strokeStyle = '#555';
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.moveTo(0, 300);
-            ctx.lineTo(canvas.width, 300);
-            ctx.stroke();
-
-            // プレイヤー
-            if (imageLoaded) {
-                ctx.drawImage(charImage, player.x, player.y, player.width, player.height);
-            } else {
-                ctx.fillStyle = '#ff80bf';
-                ctx.fillRect(player.x, player.y, player.width, player.height);
-            }
-
-            // 障害物
-            for (let obs of obstacles) {
-                if (obs.type === 'ground') {
-                    if (flowerLoaded) {
-                        ctx.drawImage(flowerImage, obs.x, obs.y, obs.width, obs.height);
-                    } else {
-                        ctx.fillStyle = '#e74c3c';
-                        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-                    }
-                } else if (obs.type.startsWith('bird')) {
-                    if (birdLoaded) {
-                        ctx.drawImage(birdImage, obs.x, obs.y, obs.width, obs.height);
-                    } else {
-                        ctx.fillStyle = '#9b59b6';
-                        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-                    }
-                }
-            }
-
-            // スコア
-            ctx.fillStyle = '#fff';
-            ctx.font = '20px sans-serif';
-            ctx.fillText(`SCORE: ${score}`, 20, 30);
-
-            // スタート画面
-            if (!isStarted) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#fff';
-                ctx.font = '22px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('画面をタップしてスタート', canvas.width / 2, canvas.height / 2);
-                ctx.textAlign = 'left';
-            }
-
-            // ゲームオーバー画面
-            if (isGameOver) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#fff';
-                ctx.font = '28px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 15);
-                ctx.font = '16px sans-serif';
-                ctx.fillText('画面をタップしてリトライ', canvas.width / 2, canvas.height / 2 + 25);
-                ctx.textAlign = 'left';
-            }
-        }
-
-        function loop() {
-            update();
-            draw();
-            requestAnimationFrame(loop);
-        }
-
-        loop();
-    </script>
-</body>
-</html>
+            if (player.
