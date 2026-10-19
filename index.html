@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ジャンプゲーム</title>
+    <title>レトロテレビ・ジャンプゲーム</title>
     <style>
         * {
             box-sizing: border-box;
@@ -14,7 +14,7 @@
             padding: 0;
         }
         body {
-            background: #111;
+            background: #000;
             color: #fff;
             display: flex;
             flex-direction: column;
@@ -25,35 +25,89 @@
             overflow: hidden;
             touch-action: manipulation;
         }
-        .game-container {
-            width: 100%;
-            max-width: 800px;
-            aspect-ratio: 2 / 1;
+
+        /* テレビ全体を収めるコンテナ */
+        .tv-wrapper {
             position: relative;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.8);
-            background: #333;
-            overflow: hidden;
+            width: 90vw;
+            max-width: 850px;
+            aspect-ratio: 16 / 9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
+
+        /* 背景のテレビ画像 (TV.jpg) */
+        .tv-frame {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+            z-index: 3;
+        }
+
+        /* テレビの画面（緑の部分）にハメ込む領域 */
+        .tv-screen-area {
+            position: absolute;
+            top: 13%;
+            left: 22%;
+            width: 58%;
+            height: 72%;
+            background: #112211;
+            overflow: hidden;
+            border-radius: 20px / 15px; /* ブラウン管風の角丸 */
+            z-index: 2;
+        }
+
         canvas {
             width: 100%;
             height: 100%;
             display: block;
         }
+
+        /* ブラウン管風のスキャンライン（横シマ）演出 */
+        .scanlines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%, 
+                rgba(0, 0, 0, 0.25) 50%
+            );
+            background-size: 100% 4px;
+            z-index: 4;
+            pointer-events: none;
+        }
+
         .instructions {
-            margin-top: 12px;
+            margin-top: 15px;
             font-size: 14px;
-            color: #aaa;
+            color: #888;
             text-align: center;
             padding: 0 10px;
             pointer-events: none;
+            z-index: 5;
         }
     </style>
 </head>
 <body>
 
-    <div class="game-container">
-        <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <div class="tv-wrapper">
+        <!-- テレビの枠画像 (TV.jpg) -->
+        <img src="TV.jpg" alt="TV Frame" class="tv-frame" id="tvImage">
+
+        <!-- テレビ画面の内側 -->
+        <div class="tv-screen-area">
+            <div class="scanlines"></div>
+            <canvas id="gameCanvas" width="800" height="400"></canvas>
+        </div>
     </div>
+
     <div class="instructions">
         画面タップ または スペースキーでジャンプ（2段ジャンプ可）
     </div>
@@ -174,7 +228,6 @@
             let newObstacle;
 
             if (rand < 0.45) {
-                // 地面の障害物（お花：IMG_4627.PNG）
                 const fHeight = 65;
                 const fWidth = fHeight * flowerAspectRatio;
                 newObstacle = {
@@ -185,7 +238,6 @@
                     height: fHeight
                 };
             } else if (rand < 0.75) {
-                // 低空の障害物（鳥：IMG_4630.PNG）
                 const bHeight = 45;
                 const bWidth = bHeight * birdAspectRatio;
                 newObstacle = {
@@ -197,7 +249,6 @@
                     speedMultiplier: 1.2
                 };
             } else {
-                // 高空の障害物（鳥：IMG_4630.PNG）
                 const bHeight = 45;
                 const bWidth = bHeight * birdAspectRatio;
                 newObstacle = {
