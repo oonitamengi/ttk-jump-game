@@ -73,6 +73,7 @@
             flex-direction: column;
             align-items: center;
             margin-top: 15px;
+            gap: 10px;
         }
 
         .instructions {
@@ -81,10 +82,36 @@
             text-align: center;
             padding: 0 10px;
             text-shadow: 0 0 5px rgba(0, 255, 204, 0.4);
-            margin-bottom: 12px;
         }
 
-        /* ゲーム画面下の余白（グレー部分）に配置するジャンプボタン */
+        /* アクションボタン（GAME START / RETRY） */
+        #actionButton {
+            width: 100%;
+            max-width: 320px;
+            height: 50px;
+            background: rgba(0, 255, 204, 0.2);
+            border: 2px solid #00ffcc;
+            border-radius: 12px;
+            box-shadow: 0 0 12px rgba(0, 255, 204, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #00ffcc;
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            touch-action: manipulation;
+            text-shadow: 0 0 6px rgba(0, 255, 204, 0.8);
+            cursor: pointer;
+        }
+
+        #actionButton:active {
+            background: rgba(0, 255, 204, 0.4);
+            transform: scale(0.97);
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.7);
+        }
+
+        /* スマホ用ジャンプボタン */
         #jumpButton {
             width: 100%;
             max-width: 320px;
@@ -103,13 +130,7 @@
             touch-action: none;
             text-shadow: 0 0 6px rgba(0, 255, 204, 0.8);
             cursor: pointer;
-            display: none; /* スマホのみ表示 */
-        }
-
-        @media (hover: none) {
-            #jumpButton {
-                display: flex;
-            }
+            display: none;
         }
 
         #jumpButton:active {
@@ -117,7 +138,6 @@
             transform: scale(0.97);
             box-shadow: 0 0 20px rgba(0, 255, 204, 0.6);
         }
-
     </style>
 </head>
 <body>
@@ -132,6 +152,7 @@
         <div class="instructions">
             画面タップ または スペースキーでジャンプ（2段ジャンプ可）
         </div>
+        <div id="actionButton">GAME START</div>
         <div id="jumpButton">▲ JUMP ▲</div>
     </div>
 
@@ -140,6 +161,7 @@
         const ctx = canvas.getContext('2d');
         const crtMonitor = document.getElementById('crtMonitor');
         const jumpButton = document.getElementById('jumpButton');
+        const actionButton = document.getElementById('actionButton');
 
         const player = {
             x: 100,
@@ -201,6 +223,21 @@
         };
         jumperImage.src = 'IMG_4632.PNG';
 
+        function updateUIState() {
+            if (!isStarted) {
+                actionButton.style.display = 'flex';
+                actionButton.textContent = 'GAME START';
+                jumpButton.style.display = 'none';
+            } else if (isGameOver) {
+                actionButton.style.display = 'flex';
+                actionButton.textContent = 'RETRY';
+                jumpButton.style.display = 'none';
+            } else {
+                actionButton.style.display = 'none';
+                jumpButton.style.display = 'flex';
+            }
+        }
+
         function triggerAction(e) {
             if (e && e.cancelable) {
                 e.preventDefault();
@@ -229,9 +266,14 @@
         });
 
         crtMonitor.addEventListener('pointerdown', (e) => {
-            if (e.target === jumpButton) return;
             triggerAction(e);
         }, { passive: false });
+
+        if (actionButton) {
+            actionButton.addEventListener('pointerdown', (e) => {
+                triggerAction(e);
+            }, { passive: false });
+        }
 
         if (jumpButton) {
             jumpButton.addEventListener('pointerdown', (e) => {
@@ -251,6 +293,7 @@
             player.vy = 0;
             player.jumpCount = 0;
             nextObstacleTimer = 50;
+            updateUIState();
         }
 
         function getRandomInt(min, max) {
@@ -402,6 +445,7 @@
                         player.y + player.height - padding > obs.y + padding
                     ) {
                         isGameOver = true;
+                        updateUIState();
                     }
 
                     if (obs.x + obs.width < 0) {
@@ -440,7 +484,6 @@
                 // 障害物描画
                 for (let obs of obstacles) {
                     if (obs.type === 'ground' || obs.type === 'growing_flower') {
-                        // 花デザイン（IMG_4627.PNG）
                         if (flowerLoaded && flowerImage.complete && flowerImage.naturalWidth > 0) {
                             ctx.drawImage(flowerImage, obs.x, obs.y, obs.width, obs.height);
                         } else {
@@ -448,7 +491,6 @@
                             ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
                         }
                     } else if (obs.type === 'jumping_enemy') {
-                        // ジャンプする敵デザイン（IMG_4632.PNG）
                         if (jumperLoaded && jumperImage.complete && jumperImage.naturalWidth > 0) {
                             ctx.drawImage(jumperImage, obs.x, obs.y, obs.width, obs.height);
                         } else {
@@ -456,7 +498,6 @@
                             ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
                         }
                     } else {
-                        // 鳥デザイン（IMG_4630.PNG）
                         if (birdLoaded && birdImage.complete && birdImage.naturalWidth > 0) {
                             ctx.drawImage(birdImage, obs.x, obs.y, obs.width, obs.height);
                         } else {
@@ -471,6 +512,7 @@
                 ctx.fillText(`SCORE: ${score}`, 20, 35);
             }
 
+            // タイトル画面
             if (!isStarted) {
                 ctx.fillStyle = 'rgba(5, 20, 11, 0.9)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -479,41 +521,39 @@
                     const titleImgHeight = 120;
                     const titleImgWidth = titleImgHeight * (charImage.naturalWidth / charImage.naturalHeight);
                     const imgX = (canvas.width - titleImgWidth) / 2;
-                    const imgY = canvas.height / 2 - 95;
+                    const imgY = canvas.height / 2 - 100;
                     ctx.drawImage(charImage, imgX, imgY, titleImgWidth, titleImgHeight);
                 }
 
                 ctx.fillStyle = '#00ffcc';
                 ctx.shadowColor = '#00ffcc';
                 ctx.shadowBlur = 10;
-                ctx.font = 'bold 32px "Courier New", monospace';
+                ctx.font = 'bold 36px "Courier New", monospace';
                 ctx.textAlign = 'center';
-                ctx.fillText('TOBU-YATU', canvas.width / 2, canvas.height / 2 + 55);
-
-                ctx.font = '18px "Courier New", monospace';
-                ctx.fillText('画面をタップしてスタート', canvas.width / 2, canvas.height / 2 + 95);
+                ctx.fillText('TOBU-YATU', canvas.width / 2, canvas.height / 2 + 50);
                 ctx.shadowBlur = 0;
-                ctx.textAlign = 'left';
             }
 
+            // ゲームオーバー画面
             if (isGameOver) {
-                ctx.fillStyle = 'rgba(5, 10, 5, 0.88)';
+                ctx.fillStyle = 'rgba(5, 10, 5, 0.92)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+                // GAME OVER テキスト
                 ctx.fillStyle = '#ff3366';
                 ctx.shadowColor = '#ff3366';
                 ctx.shadowBlur = 12;
-                ctx.font = 'bold 32px "Courier New", monospace';
+                ctx.font = 'bold 36px "Courier New", monospace';
                 ctx.textAlign = 'center';
-                ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 20);
+                ctx.fillText('GAME OVER', canvas.width / 2, 160);
 
+                // 今回のスコア表示
                 ctx.fillStyle = '#00ffcc';
                 ctx.shadowColor = '#00ffcc';
                 ctx.shadowBlur = 8;
-                ctx.font = '16px "Courier New", monospace';
-                ctx.fillText('画面をタップしてリトライ', canvas.width / 2, canvas.height / 2 + 25);
+                ctx.font = 'bold 24px "Courier New", monospace';
+                ctx.fillText(`SCORE: ${score}`, canvas.width / 2, 220);
                 ctx.shadowBlur = 0;
-                ctx.textAlign = 'left';
             }
         }
 
@@ -523,6 +563,7 @@
             requestAnimationFrame(loop);
         }
 
+        updateUIState();
         loop();
     </script>
 </body>
