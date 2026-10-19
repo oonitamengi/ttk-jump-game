@@ -33,16 +33,15 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 5px;
+            padding: 0;
         }
         .game-container {
-            width: 100%;
-            max-width: 800px;
-            aspect-ratio: 2 / 1;
+            width: 100vw;
+            height: 50vw;
+            max-height: 100vh;
             position: relative;
             box-shadow: 0 4px 20px rgba(0,0,0,0.8);
             background: #333;
-            border-radius: 8px;
             overflow: hidden;
         }
         canvas {
@@ -51,7 +50,7 @@
             display: block;
         }
         .instructions {
-            margin-top: 8px;
+            margin-top: 10px;
             font-size: 13px;
             color: #aaa;
             text-align: center;
@@ -66,7 +65,7 @@
             <canvas id="gameCanvas" width="800" height="400"></canvas>
         </div>
         <div class="instructions">
-            タップ / [Space] でジャンプ（2段ジャンプ可）
+            画面タップ / [Space] でジャンプ（2段ジャンプ可）
         </div>
     </div>
 
@@ -95,48 +94,22 @@
         let isGameOver = false;
         let nextObstacleTimer = 0;
 
-        // プレイヤー画像設定（拡張子の自動試行）
+        // プレイヤー画像の設定
         const charImage = new Image();
         let imageLoaded = false;
-        const charCandidates = ['TTK_2.PNG', 'TTK_2.png', 'TTK_2.jpg', 'TTK_2.JPG', 'TTK_2.jpeg'];
-        let charIndex = 0;
-
         charImage.onload = () => { imageLoaded = true; };
-        charImage.onerror = () => {
-            charIndex++;
-            if (charIndex < charCandidates.length) {
-                charImage.src = charCandidates[charIndex];
-            } else {
-                imageLoaded = false;
-            }
-        };
-        charImage.src = charCandidates[0];
+        charImage.onerror = () => { imageLoaded = false; };
+        charImage.src = 'TTK_2.PNG';
 
-        // 地面の障害物（お花）画像設定（各種拡張子の自動判定）
+        // 地面の障害物（IMG_4627.PNG）の確実な指定
         const flowerImage = new Image();
         let flowerLoaded = false;
-        const flowerCandidates = [
-            'IMG_4627.jpg', 
-            'IMG_4627.JPG', 
-            'IMG_4627.jpeg', 
-            'IMG_4627.PNG', 
-            'IMG_4627.png', 
-            'IMG_4627.HEIC', 
-            'IMG_4627.heic',
-            'img_4627.jpg'
-        ];
-        let flowerIndex = 0;
-
         flowerImage.onload = () => { flowerLoaded = true; };
         flowerImage.onerror = () => {
-            flowerIndex++;
-            if (flowerIndex < flowerCandidates.length) {
-                flowerImage.src = flowerCandidates[flowerIndex];
-            } else {
-                flowerLoaded = false;
-            }
+            // 万が一読み込めなかった場合の予備（小文字なども自動トライ）
+            flowerImage.src = 'IMG_4627.png';
         };
-        flowerImage.src = flowerCandidates[0];
+        flowerImage.src = 'IMG_4627.PNG';
 
         function triggerAction() {
             if (!isStarted || isGameOver) {
@@ -162,7 +135,7 @@
             }
         });
 
-        // タップ＆クリック操作
+        // スマホのタップ操作
         let touchHandled = false;
         window.addEventListener('touchstart', (e) => {
             touchHandled = true;
@@ -196,13 +169,13 @@
             let newObstacle;
 
             if (rand < 0.45) {
-                // 地面の障害物（お花）
+                // 地面の障害物（お花：IMG_4627.PNG）
                 newObstacle = {
                     type: 'ground',
                     x: canvas.width,
-                    y: 235,
-                    width: 42,
-                    height: 65
+                    y: 225, // 地面(y=300)の上にぴったり乗る高さ
+                    width: 50,
+                    height: 75
                 };
             } else if (rand < 0.75) {
                 // 低空障害物
@@ -303,7 +276,7 @@
                     if (flowerLoaded) {
                         ctx.drawImage(flowerImage, obs.x, obs.y, obs.width, obs.height);
                     } else {
-                        // 画像がどうしても見つからない場合の赤い箱
+                        // 万が一画像が読み込まれていない場合のフォールバック（赤箱）
                         ctx.fillStyle = '#e74c3c';
                         ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
                     }
@@ -328,7 +301,7 @@
                 ctx.fillStyle = '#fff';
                 ctx.font = '24px sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText('タップ または スペースキーでスタート', canvas.width / 2, canvas.height / 2);
+                ctx.fillText('画面タップでスタート', canvas.width / 2, canvas.height / 2);
                 ctx.textAlign = 'left';
             }
 
@@ -341,7 +314,7 @@
                 ctx.textAlign = 'center';
                 ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 15);
                 ctx.font = '16px sans-serif';
-                ctx.fillText('タップ または スペースキーでリトライ', canvas.width / 2, canvas.height / 2 + 25);
+                ctx.fillText('画面タップでリトライ', canvas.width / 2, canvas.height / 2 + 25);
                 ctx.textAlign = 'left';
             }
         }
