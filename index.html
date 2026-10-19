@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ジャンプゲーム</title>
     <style>
         * {
@@ -24,43 +24,37 @@
             justify-content: center;
             font-family: sans-serif;
             overflow: hidden;
-            touch-action: none;
+            touch-action: manipulation;
         }
         .game-wrapper {
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            height: 100%;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 10px;
+            padding: 5px;
         }
         .game-container {
             width: 100%;
-            max-width: 100%;
-            max-height: 80vh;
+            max-width: 800px;
             aspect-ratio: 2 / 1;
             position: relative;
             box-shadow: 0 4px 20px rgba(0,0,0,0.8);
             background: #333;
             border-radius: 8px;
             overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
         canvas {
             width: 100%;
             height: 100%;
-            object-fit: contain;
             display: block;
         }
         .instructions {
-            margin-top: 10px;
+            margin-top: 8px;
             font-size: 13px;
             color: #aaa;
             text-align: center;
-            line-height: 1.4;
             pointer-events: none;
         }
     </style>
@@ -101,32 +95,50 @@
         let isGameOver = false;
         let nextObstacleTimer = 0;
 
-        // プレイヤー画像の設定
+        // プレイヤー画像設定（拡張子の自動試行）
         const charImage = new Image();
         let imageLoaded = false;
+        const charCandidates = ['TTK_2.PNG', 'TTK_2.png', 'TTK_2.jpg', 'TTK_2.JPG', 'TTK_2.jpeg'];
+        let charIndex = 0;
+
         charImage.onload = () => { imageLoaded = true; };
         charImage.onerror = () => {
-            if (charImage.src.endsWith('TTK_2.PNG')) charImage.src = 'TTK_2.png';
-            else if (charImage.src.endsWith('TTK_2.png')) charImage.src = 'TTK_2.jpg';
-            else imageLoaded = false;
+            charIndex++;
+            if (charIndex < charCandidates.length) {
+                charImage.src = charCandidates[charIndex];
+            } else {
+                imageLoaded = false;
+            }
         };
-        charImage.src = 'TTK_2.PNG';
+        charImage.src = charCandidates[0];
 
-        // 地面の障害物（お花）画像の設定
+        // 地面の障害物（お花）画像設定（各種拡張子の自動判定）
         const flowerImage = new Image();
         let flowerLoaded = false;
+        const flowerCandidates = [
+            'IMG_4627.jpg', 
+            'IMG_4627.JPG', 
+            'IMG_4627.jpeg', 
+            'IMG_4627.PNG', 
+            'IMG_4627.png', 
+            'IMG_4627.HEIC', 
+            'IMG_4627.heic',
+            'img_4627.jpg'
+        ];
+        let flowerIndex = 0;
+
         flowerImage.onload = () => { flowerLoaded = true; };
         flowerImage.onerror = () => {
-            if (flowerImage.src.endsWith('IMG_4627.jpg')) flowerImage.src = 'IMG_4627.JPG';
-            else if (flowerImage.src.endsWith('IMG_4627.JPG')) flowerImage.src = 'IMG_4627.png';
-            else flowerLoaded = false;
-        };
-        flowerImage.src = 'IMG_4627.jpg';
-
-        function triggerAction(e) {
-            if (e && e.cancelable) {
-                e.preventDefault();
+            flowerIndex++;
+            if (flowerIndex < flowerCandidates.length) {
+                flowerImage.src = flowerCandidates[flowerIndex];
+            } else {
+                flowerLoaded = false;
             }
+        };
+        flowerImage.src = flowerCandidates[0];
+
+        function triggerAction() {
             if (!isStarted || isGameOver) {
                 resetGame();
                 return;
@@ -150,15 +162,17 @@
             }
         });
 
-        // タッチ操作（画面のどこを触っても反応）
+        // タップ＆クリック操作
+        let touchHandled = false;
         window.addEventListener('touchstart', (e) => {
-            triggerAction(e);
-        }, { passive: false });
+            touchHandled = true;
+            triggerAction();
+            setTimeout(() => { touchHandled = false; }, 300);
+        }, { passive: true });
 
-        // マウスクリック操作
         window.addEventListener('mousedown', (e) => {
-            // 操作説明文のクリック等を除外しないように全体に適用
-            triggerAction(e);
+            if (touchHandled) return;
+            triggerAction();
         });
 
         function resetGame() {
@@ -289,6 +303,7 @@
                     if (flowerLoaded) {
                         ctx.drawImage(flowerImage, obs.x, obs.y, obs.width, obs.height);
                     } else {
+                        // 画像がどうしても見つからない場合の赤い箱
                         ctx.fillStyle = '#e74c3c';
                         ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
                     }
@@ -313,7 +328,7 @@
                 ctx.fillStyle = '#fff';
                 ctx.font = '24px sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText('画面タップでスタート', canvas.width / 2, canvas.height / 2);
+                ctx.fillText('タップ または スペースキーでスタート', canvas.width / 2, canvas.height / 2);
                 ctx.textAlign = 'left';
             }
 
@@ -326,7 +341,7 @@
                 ctx.textAlign = 'center';
                 ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 15);
                 ctx.font = '16px sans-serif';
-                ctx.fillText('画面タップでリトライ', canvas.width / 2, canvas.height / 2 + 25);
+                ctx.fillText('タップ または スペースキーでリトライ', canvas.width / 2, canvas.height / 2 + 25);
                 ctx.textAlign = 'left';
             }
         }
