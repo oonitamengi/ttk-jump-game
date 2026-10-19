@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ジャンプゲーム</title>
     <style>
         * {
@@ -10,52 +10,70 @@
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
-        }
-        body {
             margin: 0;
             padding: 0;
-            background: #222;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            background: #111;
             color: #fff;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
             font-family: sans-serif;
             overflow: hidden;
             touch-action: none;
         }
-        .game-container {
+        .game-wrapper {
             width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+        }
+        .game-container {
+            width: 100%;
+            max-width: 100%;
+            max-height: 80vh;
             aspect-ratio: 2 / 1;
             position: relative;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.8);
             background: #333;
+            border-radius: 8px;
             overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         canvas {
             width: 100%;
             height: 100%;
+            object-fit: contain;
             display: block;
-            cursor: pointer;
         }
         .instructions {
-            margin-top: 15px;
-            font-size: 14px;
+            margin-top: 10px;
+            font-size: 13px;
             color: #aaa;
             text-align: center;
-            padding: 0 10px;
-            line-height: 1.5;
+            line-height: 1.4;
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
 
-    <div class="game-container">
-        <canvas id="gameCanvas" width="800" height="400"></canvas>
-    </div>
-    <div class="instructions">
-        画面タップ または スペースキーでジャンプ（空中で2段ジャンプ可）<br>スタートします
+    <div class="game-wrapper">
+        <div class="game-container">
+            <canvas id="gameCanvas" width="800" height="400"></canvas>
+        </div>
+        <div class="instructions">
+            タップ / [Space] でジャンプ（2段ジャンプ可）
+        </div>
     </div>
 
     <script>
@@ -74,7 +92,7 @@
             jumpCount: 0
         };
 
-        const groundLevel = 250; // 地面の基準位置（y座標）
+        const groundLevel = 250;
 
         let obstacles = [];
         let gameSpeed = 5;
@@ -83,27 +101,30 @@
         let isGameOver = false;
         let nextObstacleTimer = 0;
 
-        // プレイヤー画像
+        // プレイヤー画像の設定
         const charImage = new Image();
         let imageLoaded = false;
         charImage.onload = () => { imageLoaded = true; };
         charImage.onerror = () => {
             if (charImage.src.endsWith('TTK_2.PNG')) charImage.src = 'TTK_2.png';
             else if (charImage.src.endsWith('TTK_2.png')) charImage.src = 'TTK_2.jpg';
+            else imageLoaded = false;
         };
         charImage.src = 'TTK_2.PNG';
 
-        // 地面の障害物（お花）の画像
+        // 地面の障害物（お花）画像の設定
         const flowerImage = new Image();
         let flowerLoaded = false;
         flowerImage.onload = () => { flowerLoaded = true; };
         flowerImage.onerror = () => {
             if (flowerImage.src.endsWith('IMG_4627.jpg')) flowerImage.src = 'IMG_4627.JPG';
+            else if (flowerImage.src.endsWith('IMG_4627.JPG')) flowerImage.src = 'IMG_4627.png';
+            else flowerLoaded = false;
         };
         flowerImage.src = 'IMG_4627.jpg';
 
         function triggerAction(e) {
-            if (e) {
+            if (e && e.cancelable) {
                 e.preventDefault();
             }
             if (!isStarted || isGameOver) {
@@ -111,7 +132,6 @@
                 return;
             }
 
-            // 二段階ジャンプの制限と適用
             if (player.jumpCount < 2) {
                 if (player.jumpCount === 0) {
                     player.vy = player.jumpPower;
@@ -122,6 +142,7 @@
             }
         }
 
+        // キーボード操作
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
                 e.preventDefault();
@@ -129,12 +150,15 @@
             }
         });
 
-        canvas.addEventListener('touchstart', (e) => {
+        // タッチ操作（画面のどこを触っても反応）
+        window.addEventListener('touchstart', (e) => {
             triggerAction(e);
         }, { passive: false });
 
-        canvas.addEventListener('click', (e) => {
-            triggerAction();
+        // マウスクリック操作
+        window.addEventListener('mousedown', (e) => {
+            // 操作説明文のクリック等を除外しないように全体に適用
+            triggerAction(e);
         });
 
         function resetGame() {
@@ -158,15 +182,16 @@
             let newObstacle;
 
             if (rand < 0.45) {
-                // 地面の障害物（お花画像を使用）
+                // 地面の障害物（お花）
                 newObstacle = {
                     type: 'ground',
                     x: canvas.width,
-                    y: 235, // 地面(y=300)の上にぴったり乗るように調整
+                    y: 235,
                     width: 42,
                     height: 65
                 };
             } else if (rand < 0.75) {
+                // 低空障害物
                 newObstacle = {
                     type: 'ptera_low',
                     x: canvas.width,
@@ -177,6 +202,7 @@
                     speedMultiplier: 1.2
                 };
             } else {
+                // 高空障害物
                 newObstacle = {
                     type: 'ptera_high',
                     x: canvas.width,
@@ -194,18 +220,15 @@
             if (isStarted && !isGameOver) {
                 score++;
 
-                // 物理演算
                 player.vy += player.gravity;
                 player.y += player.vy;
 
-                // 地面判定
                 if (player.y >= groundLevel) {
                     player.y = groundLevel;
                     player.vy = 0;
                     player.jumpCount = 0;
                 }
 
-                // 障害物の生成タイマー
                 nextObstacleTimer--;
                 if (nextObstacleTimer <= 0) {
                     createObstacle();
@@ -214,10 +237,8 @@
                     nextObstacleTimer = getRandomInt(minInterval, maxInterval);
                 }
 
-                // 障害物の移動と当たり判定
                 for (let i = obstacles.length - 1; i >= 0; i--) {
                     let obs = obstacles[i];
-                    
                     let currentSpeed = gameSpeed;
                     if (obs.type.startsWith('ptera')) {
                         currentSpeed *= obs.speedMultiplier;
@@ -228,4 +249,95 @@
                     if (
                         player.x + padding < obs.x + obs.width - padding &&
                         player.x + player.width - padding > obs.x + padding &&
-                        player.y + padding
+                        player.y + padding < obs.y + obs.height - padding &&
+                        player.y + player.height - padding > obs.y + padding
+                    ) {
+                        isGameOver = true;
+                    }
+
+                    if (obs.x + obs.width < 0) {
+                        obstacles.splice(i, 1);
+                    }
+                }
+
+                gameSpeed = 5 + Math.floor(score / 350);
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 地面描画
+            ctx.strokeStyle = '#555';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(0, 300);
+            ctx.lineTo(canvas.width, 300);
+            ctx.stroke();
+
+            // プレイヤー描画
+            if (imageLoaded) {
+                ctx.drawImage(charImage, player.x, player.y, player.width, player.height);
+            } else {
+                ctx.fillStyle = '#ff80bf';
+                ctx.fillRect(player.x, player.y, player.width, player.height);
+            }
+
+            // 障害物描画
+            for (let obs of obstacles) {
+                if (obs.type === 'ground') {
+                    if (flowerLoaded) {
+                        ctx.drawImage(flowerImage, obs.x, obs.y, obs.width, obs.height);
+                    } else {
+                        ctx.fillStyle = '#e74c3c';
+                        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                    }
+                } else {
+                    ctx.fillStyle = obs.color;
+                    ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
+                }
+            }
+
+            // スコア表示
+            ctx.fillStyle = '#fff';
+            ctx.font = '20px sans-serif';
+            ctx.fillText(`SCORE: ${score}`, 20, 30);
+
+            // スタート画面
+            if (!isStarted) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#fff';
+                ctx.font = '24px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('画面タップでスタート', canvas.width / 2, canvas.height / 2);
+                ctx.textAlign = 'left';
+            }
+
+            // ゲームオーバー画面
+            if (isGameOver) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#fff';
+                ctx.font = '30px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 15);
+                ctx.font = '16px sans-serif';
+                ctx.fillText('画面タップでリトライ', canvas.width / 2, canvas.height / 2 + 25);
+                ctx.textAlign = 'left';
+            }
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        loop();
+    </script>
+</body>
+</html>
