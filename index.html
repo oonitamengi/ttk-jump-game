@@ -32,22 +32,27 @@
             width: 95vw;
             max-width: 850px;
             aspect-ratio: 16 / 9;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
 
-        /* テレビ画面（緑の部分）の配置エリア */
+        /* テレビの枠画像 (TV.jpg) を一番下に配置してベースにする */
+        .tv-frame {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: contain;
+        }
+
+        /* テレビの画面（緑の部分）の正確な位置にゲームをハメ込むコンテナ */
         .tv-screen-area {
             position: absolute;
+            /* ※もし位置がズレる場合はここの % を微調整してください */
             top: 13%;
             left: 22%;
             width: 58%;
             height: 72%;
             background: #112211;
             overflow: hidden;
-            border-radius: 20px / 15px;
-            z-index: 10;
+            border-radius: 15px / 12px;
         }
 
         canvas {
@@ -56,18 +61,6 @@
             display: block;
             cursor: pointer;
             touch-action: none;
-        }
-
-        /* テレビの枠画像 (TV.jpg)[cite: 2] */
-        .tv-frame {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            pointer-events: none;
-            z-index: 20;
         }
 
         /* ブラウン管風のスキャンライン */
@@ -82,8 +75,8 @@
                 rgba(0, 0, 0, 0.25) 50%
             );
             background-size: 100% 4px;
-            z-index: 15;
             pointer-events: none;
+            z-index: 10;
         }
 
         .instructions {
@@ -92,21 +85,20 @@
             color: #888;
             text-align: center;
             padding: 0 10px;
-            z-index: 25;
         }
     </style>
 </head>
 <body>
 
     <div class="tv-wrapper">
-        <!-- ゲーム画面（テレビの内側） -->
+        <!-- 1. ベースとなるテレビの枠画像 (TV.jpg) -->
+        <img src="TV.jpg" alt="TV Frame" class="tv-frame" id="tvImage">
+
+        <!-- 2. テレビ画面の内側に埋め込むゲーム領域 -->
         <div class="tv-screen-area">
             <div class="scanlines"></div>
             <canvas id="gameCanvas" width="800" height="400"></canvas>
         </div>
-
-        <!-- テレビの枠画像 (TV.jpg)[cite: 2] -->
-        <img src="TV.jpg" alt="TV Frame" class="tv-frame" id="tvImage">
     </div>
 
     <div class="instructions">
@@ -146,7 +138,6 @@
             const aspectRatio = charImage.naturalWidth / charImage.naturalHeight;
             player.width = player.height * aspectRatio;
         };
-        charImage.onerror = () => { imageLoaded = false; };
         charImage.src = 'TTK_2.PNG';
 
         // 地面の障害物（お花：IMG_4627.PNG）の設定
@@ -157,7 +148,6 @@
             flowerLoaded = true;
             flowerAspectRatio = flowerImage.naturalWidth / flowerImage.naturalHeight;
         };
-        flowerImage.onerror = () => { flowerLoaded = false; };
         flowerImage.src = 'IMG_4627.PNG';
 
         // 上空の障害物（鳥：IMG_4630.PNG）の設定
@@ -168,10 +158,11 @@
             birdLoaded = true;
             birdAspectRatio = birdImage.naturalWidth / birdImage.naturalHeight;
         };
-        birdImage.onerror = () => { birdLoaded = false; };
         birdImage.src = 'IMG_4630.PNG';
 
-        function triggerAction() {
+        function triggerAction(e) {
+            if (e) e.preventDefault();
+
             if (!isStarted || isGameOver) {
                 resetGame();
                 return;
@@ -195,10 +186,9 @@
             }
         });
 
-        // pointerdown を使うことでスマホのタップとPCのクリックを綺麗に両立
+        // タップ/クリック操作
         canvas.addEventListener('pointerdown', (e) => {
-            e.preventDefault();
-            triggerAction();
+            triggerAction(e);
         });
 
         function resetGame() {
