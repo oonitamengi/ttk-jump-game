@@ -26,38 +26,33 @@
             touch-action: manipulation;
         }
 
-        /* テレビ全体を収めるコンテナ */
+        /* 全体枠コンテナ */
         .tv-container {
             position: relative;
-            width: 95vw;
-            max-width: 800px;
-            aspect-ratio: 16 / 9;
-            background-color: #000;
+            width: 100vw;
+            height: 80vh;
+            max-width: 900px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
         }
 
-        /* テレビの枠画像 */
+        /* テレビ画像 */
         .tv-bg {
-            position: absolute;
-            top: 0;
-            left: 0;
             width: 100%;
             height: 100%;
             object-fit: contain;
+            display: block;
             pointer-events: none;
-            z-index: 1;
         }
 
-        /* テレビの緑画面に精密調整したハメ込み領域 */
+        /* テレビの緑画面部分（JavaScriptでTV画像の位置に自動で合体させます） */
         .tv-screen {
             position: absolute;
-            top: 13.5%;
-            left: 15.8%;
-            width: 68.4%;
-            height: 54.5%;
             background: #112211;
             overflow: hidden;
-            border-radius: 12px / 8px;
+            border-radius: 12px;
             z-index: 2;
         }
 
@@ -67,7 +62,7 @@
             display: block;
         }
 
-        /* スキャンライン（走査線） */
+        /* スキャンライン */
         .scanlines {
             position: absolute;
             top: 0;
@@ -84,7 +79,7 @@
         }
 
         .instructions {
-            margin-top: 15px;
+            margin-top: 10px;
             font-size: 14px;
             color: #aaa;
             text-align: center;
@@ -95,25 +90,63 @@
 <body>
 
     <div class="tv-container" id="tvContainer">
-        <!-- 背景のテレビ枠 (TV.jpg) -->
         <img src="TV.jpg" alt="TV Frame" class="tv-bg" id="tvImg">
 
-        <!-- ゲーム画面（緑の部分） -->
-        <div class="tv-screen">
+        <div class="tv-screen" id="tvScreen">
             <div class="scanlines"></div>
             <canvas id="gameCanvas" width="800" height="400"></canvas>
         </div>
     </div>
 
     <div class="instructions">
-        画面全体をタップ または スペースキーでジャンプ（2段ジャンプ可）
+        画面タップ または スペースキーでジャンプ（2段ジャンプ可）
     </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        const tvImg = document.getElementById('tvImg');
+        const tvScreen = document.getElementById('tvScreen');
         const tvContainer = document.getElementById('tvContainer');
 
+        // --- テレビの緑画面部分にCanvasを自動でピッタリ合わせるリサイズ計算 ---
+        function fitScreenToTV() {
+            if (!tvImg.complete || tvImg.naturalWidth === 0) return;
+
+            const containerRect = tvContainer.getBoundingClientRect();
+            const imgRatio = tvImg.naturalWidth / tvImg.naturalHeight;
+            const containerRatio = containerRect.width / containerRect.height;
+
+            let renderWidth, renderHeight, offsetX, offsetY;
+
+            if (containerRatio > imgRatio) {
+                renderHeight = containerRect.height;
+                renderWidth = renderHeight * imgRatio;
+                offsetX = (containerRect.width - renderWidth) / 2;
+                offsetY = 0;
+            } else {
+                renderWidth = containerRect.width;
+                renderHeight = renderWidth / imgRatio;
+                offsetX = 0;
+                offsetY = (containerRect.height - renderHeight) / 2;
+            }
+
+            // TV.jpg 内の緑色の画面位置比率 (Top:13.5%, Left:15.8%, Width:68.4%, Height:54.5%)
+            tvScreen.style.left = (offsetX + renderWidth * 0.158) + 'px';
+            tvScreen.style.top = (offsetY + renderHeight * 0.135) + 'px';
+            tvScreen.style.width = (renderWidth * 0.684) + 'px';
+            tvScreen.style.height = (renderHeight * 0.545) + 'px';
+        }
+
+        window.addEventListener('resize', fitScreenToTV);
+        tvImg.addEventListener('load', fitScreenToTV);
+        tvImg.onerror = () => {
+            tvImg.src = 'TV.JPG';
+        };
+        // 初期読み込み時にも実行
+        setTimeout(fitScreenToTV, 100);
+
+        // --- ゲーム処理 ---
         const player = {
             x: 100,
             y: 250,
@@ -127,7 +160,6 @@
         };
 
         const groundLevel = 250;
-
         let obstacles = [];
         let gameSpeed = 5;
         let score = 0;
@@ -135,7 +167,6 @@
         let isGameOver = false;
         let nextObstacleTimer = 0;
 
-        // 画像の読み込み
         const charImage = new Image();
         let imageLoaded = false;
         charImage.onload = () => {
@@ -162,12 +193,6 @@
         };
         birdImage.src = 'IMG_4630.PNG';
 
-        // テレビ画像の拡張子対策
-        const tvImg = document.getElementById('tvImg');
-        tvImg.onerror = () => {
-            tvImg.src = 'TV.JPG';
-        };
-
         function triggerAction(e) {
             if (e) {
                 e.preventDefault();
@@ -179,4 +204,29 @@
                 return;
             }
 
-            if (player.
+            if (player.jumpCount < 2) {
+                if (player.jumpCount === 0) {
+                    player.vy = player.jumpPower;
+                } else {
+                    player.vy = player.doubleJumpPower;
+                }
+                player.jumpCount++;
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                triggerAction();
+            }
+        });
+
+        tvContainer.addEventListener('pointerdown', (e) => {
+            triggerAction(e);
+        });
+
+        function resetGame() {
+            obstacles = [];
+            score = 0;
+            gameSpeed = 5;
+            isGameOver =
