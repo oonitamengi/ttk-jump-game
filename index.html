@@ -295,9 +295,15 @@
                 nextObstacleTimer--;
                 if (nextObstacleTimer <= 0) {
                     createObstacle();
-                    const minInterval = Math.max(30, 70 - Math.floor(score / 250));
-                    const maxInterval = Math.max(60, 130 - Math.floor(score / 250));
-                    nextObstacleTimer = getRandomInt(minInterval, maxInterval);
+                    
+                    // スコア5000以上で出現タイミングが激しく不規則（超ランダム）に変化
+                    if (score > 5000) {
+                        nextObstacleTimer = getRandomInt(15, 110);
+                    } else {
+                        const minInterval = Math.max(30, 70 - Math.floor(score / 250));
+                        const maxInterval = Math.max(60, 130 - Math.floor(score / 250));
+                        nextObstacleTimer = getRandomInt(minInterval, maxInterval);
+                    }
                 }
 
                 for (let i = obstacles.length - 1; i >= 0; i--) {
@@ -315,13 +321,11 @@
                             currentSpeed *= 2.4;
                         }
                     } else if (obs.type === 'jumping_enemy') {
-                        // ジャンプアクションの処理
-                        obs.vy += 0.6; // 重力
+                        obs.vy += 0.6;
                         obs.y += obs.vy;
                         if (obs.y >= 300 - obs.height) {
                             obs.y = 300 - obs.height;
                             obs.vy = 0;
-                            // 一定間隔でピョンと跳ねる
                             obs.jumpTimer--;
                             if (obs.jumpTimer <= 0) {
                                 obs.vy = -9.5;
