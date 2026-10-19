@@ -94,10 +94,10 @@
         charImage.onerror = () => { imageLoaded = false; };
         charImage.src = 'TTK_2.PNG';
 
-        // 地面の障害物（お花：IMG_4627.PNG）の設定（縦横比自動計算）
+        // 地面の障害物（お花：IMG_4627.PNG）の設定
         const flowerImage = new Image();
         let flowerLoaded = false;
-        let flowerAspectRatio = 1; // 予備の比率
+        let flowerAspectRatio = 1;
         flowerImage.onload = () => {
             flowerLoaded = true;
             flowerAspectRatio = flowerImage.naturalWidth / flowerImage.naturalHeight;
@@ -106,6 +106,19 @@
             flowerImage.src = 'IMG_4627.png';
         };
         flowerImage.src = 'IMG_4627.PNG';
+
+        // 上空の障害物（鳥：IMG_4630.jpg）の設定[cite: 2]
+        const birdImage = new Image();
+        let birdLoaded = false;
+        let birdAspectRatio = 1.3;
+        birdImage.onload = () => {
+            birdLoaded = true;
+            birdAspectRatio = birdImage.naturalWidth / birdImage.naturalHeight;
+        };
+        birdImage.onerror = () => {
+            birdImage.src = 'IMG_4630.JPG';
+        };
+        birdImage.src = 'IMG_4630.jpg';
 
         function triggerAction() {
             if (!isStarted || isGameOver) {
@@ -165,37 +178,38 @@
             let newObstacle;
 
             if (rand < 0.45) {
-                // 地面の障害物（お花：IMG_4627.PNG）
-                // 高さを65に固定し、比率に合わせて幅を自動で決定します
+                // 地面の障害物（お花）
                 const fHeight = 65;
                 const fWidth = fHeight * flowerAspectRatio;
                 newObstacle = {
                     type: 'ground',
                     x: canvas.width,
-                    y: 300 - fHeight, // 地面(y=300)の上にぴったり配置
+                    y: 300 - fHeight,
                     width: fWidth,
                     height: fHeight
                 };
             } else if (rand < 0.75) {
-                // 低空障害物
+                // 低空の障害物（鳥）[cite: 2]
+                const bHeight = 45;
+                const bWidth = bHeight * birdAspectRatio;
                 newObstacle = {
-                    type: 'ptera_low',
+                    type: 'bird_low',
                     x: canvas.width,
-                    y: 210,
-                    width: 45,
-                    height: 25,
-                    color: '#9b59b6',
+                    y: 200,
+                    width: bWidth,
+                    height: bHeight,
                     speedMultiplier: 1.2
                 };
             } else {
-                // 高空障害物
+                // 高空の障害物（鳥）[cite: 2]
+                const bHeight = 45;
+                const bWidth = bHeight * birdAspectRatio;
                 newObstacle = {
-                    type: 'ptera_high',
+                    type: 'bird_high',
                     x: canvas.width,
-                    y: 130,
-                    width: 45,
-                    height: 25,
-                    color: '#8e44ad',
+                    y: 120,
+                    width: bWidth,
+                    height: bHeight,
                     speedMultiplier: 1.4
                 };
             }
@@ -226,7 +240,7 @@
                 for (let i = obstacles.length - 1; i >= 0; i--) {
                     let obs = obstacles[i];
                     let currentSpeed = gameSpeed;
-                    if (obs.type.startsWith('ptera')) {
+                    if (obs.type.startsWith('bird')) {
                         currentSpeed *= obs.speedMultiplier;
                     }
                     obs.x -= currentSpeed;
@@ -273,18 +287,18 @@
             for (let obs of obstacles) {
                 if (obs.type === 'ground') {
                     if (flowerLoaded) {
-                        // 動的に計算した正しいアスペクト比の幅・高さで描画
                         ctx.drawImage(flowerImage, obs.x, obs.y, obs.width, obs.height);
                     } else {
                         ctx.fillStyle = '#e74c3c';
                         ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
                     }
-                } else {
-                    ctx.fillStyle = obs.color;
-                    ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-                    ctx.strokeStyle = '#fff';
-                    ctx.lineWidth = 1;
-                    ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
+                } else if (obs.type.startsWith('bird')) {
+                    if (birdLoaded) {
+                        ctx.drawImage(birdImage, obs.x, obs.y, obs.width, obs.height);
+                    } else {
+                        ctx.fillStyle = '#9b59b6';
+                        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                    }
                 }
             }
 
