@@ -12,6 +12,8 @@
             user-select: none;
             margin: 0;
             padding: 0;
+            /* ダブルタップズーム防止 */
+            touch-action: manipulation;
         }
         body {
             background: #050b07;
@@ -41,13 +43,14 @@
             border: 3px solid #004d33;
             overflow: hidden;
             cursor: pointer;
+            touch-action: manipulation;
         }
 
         canvas {
             width: 100%;
             height: 100%;
             display: block;
-            touch-action: none;
+            touch-action: manipulation;
             filter: drop-shadow(0 0 4px #00ffcc);
         }
 
@@ -127,7 +130,7 @@
             font-size: 20px;
             font-weight: bold;
             letter-spacing: 2px;
-            touch-action: none;
+            touch-action: manipulation;
             text-shadow: 0 0 6px rgba(0, 255, 204, 0.8);
             cursor: pointer;
             display: none;
@@ -162,6 +165,16 @@
         const crtMonitor = document.getElementById('crtMonitor');
         const jumpButton = document.getElementById('jumpButton');
         const actionButton = document.getElementById('actionButton');
+
+        // iOS用のダブルタップ拡大防止処理
+        let lastTouchTime = 0;
+        document.addEventListener('touchend', (e) => {
+            const now = Date.now();
+            if (now - lastTouchTime <= 300) {
+                e.preventDefault();
+            }
+            lastTouchTime = now;
+        }, { passive: false });
 
         const player = {
             x: 100,
